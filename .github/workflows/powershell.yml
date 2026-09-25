@@ -1,0 +1,53 @@
+name: PowerShell CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          persist-credentials: false
+
+      - name: Verify PowerShell version
+        shell: pwsh
+        run: |
+          if ([version]$PSVersionTable.PSVersion -lt [version]'7.4') {
+            throw "PowerShell 7.4+ e obrigatorio. Versao detectada: $($PSVersionTable.PSVersion)"
+          }
+
+      - name: Setup PowerShell modules
+        shell: pwsh
+        run: |
+          Install-Module Pester -RequiredVersion 6.2.0 -Scope CurrentUser -Force -Confirm:$false
+          Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force -Confirm:$false
+
+      - name: Static analysis
+        shell: pwsh
+        run: |
+          $results = @(Invoke-ScriptAnalyzer -Path . -Include *.ps1 -Severity Error)
+          if ($results) {
+            $results | Format-Table -AutoSize | Out-String | Write-Host
+            exit 1
+          }
+
+      - name: Repository audit
+        shell: pwsh
+        run: |
+          & .\tools\Invoke-RepositoryAudit.ps1
+
+      - name: Tests
+        shell: pwsh
+        run: |
+          & .\tools\Invoke-Checks.ps1

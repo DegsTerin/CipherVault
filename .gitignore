@@ -1,0 +1,15 @@
+# Local test/build output
+test-results.xml
+dist/
+*.zip
+
+# Local PowerShell metadata
+*.psd1.local
+*.psm1.local
+
+# Secrets / certificates that must never be committed
+.env
+.env.*
+*.pem
+*.pfx
+*.key
