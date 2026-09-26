@@ -10,6 +10,7 @@ dist/
 # Secrets / certificates that must never be committed
 .env
 .env.*
+secrets.txt
 *.pem
 *.pfx
 *.key
