@@ -1,4 +1,3 @@
-
 cd C:\Users\Bruno\OneDrive\Projects\Systems\CipherVault
 
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass

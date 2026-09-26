@@ -22,11 +22,11 @@ $analyzer = Get-Module -ListAvailable -Name PSScriptAnalyzer |
     Select-Object -First 1
 
 if ($null -eq $pester) {
-    throw 'Pester 6.2.0 nao esta instalado. Execute .\tools\Install-DevDependencies.ps1'
+    throw 'Pester 6.2.0 is not installed. Run .\tools\Install-DevDependencies.ps1'
 }
 
 if ($null -eq $analyzer) {
-    throw 'PSScriptAnalyzer 1.25.0 nao esta instalado. Execute .\tools\Install-DevDependencies.ps1'
+    throw 'PSScriptAnalyzer 1.25.0 is not installed. Run .\tools\Install-DevDependencies.ps1'
 }
 
 Import-Module Pester -RequiredVersion $pester.Version -Force
@@ -45,8 +45,8 @@ foreach ($scriptFile in $scriptFiles) {
 if ($analysis.Count -gt 0) {
     $analysis | Format-Table -AutoSize | Out-String | Write-Host
     Write-Host
-    Write-Host 'CIPHERVAULT | CHECKS FALHARAM' -ForegroundColor Red
-    throw "PSScriptAnalyzer encontrou $($analysis.Count) erro(s)."
+    Write-Host 'CIPHERVAULT | CHECKS FAILED' -ForegroundColor Red
+    throw "PSScriptAnalyzer found $($analysis.Count) error(s)."
 }
 Write-Host 'OK' -ForegroundColor Green
 Write-Host
@@ -67,8 +67,8 @@ $null = Invoke-Pester -Configuration $config
 
 if (-not (Test-Path -LiteralPath $resultsPath)) {
     Write-Host
-    Write-Host 'CIPHERVAULT | TESTES FALHARAM' -ForegroundColor Red
-    throw 'O Pester terminou sem gerar o arquivo test-results.xml.'
+    Write-Host 'CIPHERVAULT | TESTS FAILED' -ForegroundColor Red
+    throw 'Pester finished without generating the test-results.xml file.'
 }
 
 [xml]$testXml = Get-Content -LiteralPath $resultsPath -Raw
@@ -89,8 +89,8 @@ if ($passed -lt 0) {
 
 if (($errors + $failures + $notRun + $inconclusive + $ignored + $skipped) -gt 0) {
     Write-Host
-    Write-Host 'CIPHERVAULT | TESTES FALHARAM' -ForegroundColor Red
-    Write-Host "Testes passados: $passed | Falhas: $failures | Erros: $errors | Nao executados: $notRun"
+    Write-Host 'CIPHERVAULT | TESTS FAILED' -ForegroundColor Red
+    Write-Host "Tests passed: $passed | Failures: $failures | Errors: $errors | Not run: $notRun"
     exit 1
 }
 
@@ -98,14 +98,14 @@ Write-Host 'OK' -ForegroundColor Green
 Write-Host
 Write-Host '╔══════════════════════════════════════════════════════════════╗' -ForegroundColor Green
 Write-Host (('║{0}║' -f ('CIPHERVAULT | CHECKS OK'.PadLeft(31).PadRight(62)))) -ForegroundColor Green
-Write-Host (('║{0}║' -f ('ANALISE E TESTES CONCLUIDOS'.PadLeft(32).PadRight(62)))) -ForegroundColor Green
+Write-Host (('║{0}║' -f ('ANALYSIS AND TESTS COMPLETED'.PadLeft(32).PadRight(62)))) -ForegroundColor Green
 Write-Host '╚══════════════════════════════════════════════════════════════╝' -ForegroundColor Green
 Write-Host
 Write-Host 'PSScriptAnalyzer : OK' -ForegroundColor Green
 Write-Host 'Pester           : OK' -ForegroundColor Green
 Write-Host
-Write-Host "Testes passados  : $passed" -ForegroundColor Green
-Write-Host "Falhas           : $failures" -ForegroundColor Green
-Write-Host "Erros             : $errors" -ForegroundColor Green
-Write-Host "Nao executados   : $notRun" -ForegroundColor Green
+Write-Host "Tests passed   : $passed" -ForegroundColor Green
+Write-Host "Failures       : $failures" -ForegroundColor Green
+Write-Host "Errors          : $errors" -ForegroundColor Green
+Write-Host "Not run        : $notRun" -ForegroundColor Green
 Write-Host

@@ -1,229 +1,223 @@
-# CipherVault, auditoria criptografica e ofensiva
+# CipherVault, cryptographic and offensive security audit
 
-**Versao atual revisada:** 3.6.2**Data da revisao:** 2026-09-25
+**Current reviewed version:** 3.6.2
+**Review date:** 2026-09-25
 
-## Escopo
+## Scope
 
-A revisao cobre o codigo atual e o pacote de testes. O foco foi:
+The review covers the current code and test package. The focus was:
 
-- derivacao de chave;
+- key derivation;
 - AES-GCM;
-- salt e nonce;
-- autenticacao por GCM e AAD;
-- serializacao Base64 personalizada;
-- validacao de entrada;
+- salt and nonce;
+- authentication through GCM and AAD;
+- custom Base64 serialisation;
+- input validation;
 - tampering;
-- exposicao no terminal e clipboard;
-- abuso de recursos;
-- testes e analise estatica para distribuicao publica.
+- terminal and clipboard exposure;
+- resource abuse;
+- testing and static analysis for public distribution.
 
-Esta revisao e uma auditoria de codigo-fonte assistida, nao uma certificacao formal nem uma auditoria independente de terceira parte. A execucao dinamica deve ocorrer no ambiente Windows/PowerShell suportado pelo projeto.
+This review is an assisted source-code audit, not a formal certification or an independent third-party audit. Dynamic execution must take place in the Windows/PowerShell environment supported by the project.
 
-## Construcao criptografica
+## Cryptographic construction
 
-O projeto usa AES-256-GCM com tag de 128 bits, nonce de 96 bits, salt aleatorio de 128 bits e PBKDF2-HMAC-SHA256 com 600.000 iteracoes. A chave derivada possui 256 bits.
+The project uses AES-256-GCM with a 128-bit tag, 96-bit nonce, 128-bit random salt and PBKDF2-HMAC-SHA256 with 600,000 iterations. The derived key is 256 bits.
 
-O formato atual e exclusivamente:
+The current format is exclusively:
 
 ```text
 SC4.salt.nonce.tag.ciphertext
 ```
 
-A AAD vincula versao, algoritmo e parametros do KDF.
+AAD binds the version, algorithm and KDF parameters.
 
-## Testes incluidos
+## Included tests
 
-A suite cobre:
+The suite covers:
 
-- reversibilidade do Base64 personalizado;
-- round-trip Unicode;
-- aleatoriedade observavel das mensagens geradas para o mesmo plaintext e senha;
-- senha incorreta;
-- alteracao de salt, tag e ciphertext;
-- rejeicao de identificadores de formato nao suportados.
+- reversibility of custom Base64;
+- Unicode round-trip;
+- observable randomness of messages generated from the same plaintext and password;
+- incorrect password;
+- modification of salt, tag and ciphertext;
+- rejection of unsupported format identifiers.
 
-## Resultado atual
+## Current result
 
-Os testes executados no ambiente de desenvolvimento do projeto devem ser registrados no CI e no historico do GitHub. A ausencia de findings do PSScriptAnalyzer em severidade `Error` nao substitui uma auditoria criptografica independente.
+Tests run in the project's development environment should be recorded in CI and in the GitHub history. The absence of PSScriptAnalyzer findings at `Error` severity does not replace an independent cryptographic audit.
 
-## Limitacoes conhecidas
+## Known limitations
 
-- Senhas sao recebidas pelo PowerShell como `string`, portanto limpeza deterministica da memoria nao e garantida.
-- Terminal e clipboard podem expor texto a mecanismos do sistema operacional.
-- O alfabeto personalizado nao adiciona entropia nem substitui a criptografia.
-- Seguranca pratica continua dependente da qualidade da senha e da integridade do endpoint.
+- Passwords are received by PowerShell as `string`, so deterministic memory clearing is not guaranteed.
+- The terminal and clipboard may expose text to operating-system mechanisms.
+- The custom alphabet does not add entropy or replace encryption.
+- Practical security remains dependent on password quality and endpoint integrity.
 
-## Recomendacao de publicacao
+## Publication recommendation
 
-Antes do primeiro release publico, execute no Windows suportado:
+Before the first public release, run on a supported Windows system:
 
 ```powershell
 Invoke-ScriptAnalyzer -Path .\CipherVault.ps1 -Severity Error
 Invoke-Pester .\tests
 ```
 
-E preserve o resultado do CI para cada release.
+Preserve the CI result for each release.
 
+## Second offensive security round, 2026-09-25
 
-## Segunda rodada ofensiva, 2026-09-25
+The second round was driven by the real 6/6 test result and by review of the input/output path, including cases not covered by the original suite.
 
-A segunda rodada foi orientada pelo resultado real de 6/6 testes e pela revisao do caminho de entrada/saida, incluindo casos que a suite original nao cobria.
+### Finding R2-01, terminal control injection in error messages, fixed in 3.3.0
 
-### Finding R2-01, terminal control injection em mensagens de erro, corrigido em 3.3.0
+In version 3.1.1, some parsing errors reflected user-supplied characters directly in the exception message. The interactive flow printed the exception with `Write-Host`. A malformed ciphertext containing ESC/CSI could therefore inject terminal control sequences while the error was being handled. This did not break AES-GCM, but could alter the screen, overwrite information or produce visual spoofing in ANSI terminals.
 
-Na versao 3.1.1, alguns erros de parsing refletiam caracteres fornecidos pelo usuario diretamente na mensagem da excecao. O fluxo interativo imprimia a excecao com `Write-Host`. Um ciphertext malformado contendo ESC/CSI podia, portanto, injetar sequencias de controle no terminal durante o tratamento do erro. Isso nao quebrava AES-GCM, mas poderia alterar a tela, sobrescrever informacoes ou produzir spoofing visual em terminais ANSI.
+Version 3.3.0 sanitises every error message before displaying it and reports invalid characters by code point without reflecting the raw character. C0/C1 controls, bidi controls and invisible characters are also escaped for display. PowerShell 7 and Windows Terminal support ANSI/VT sequences, so this layer must be treated as an input surface when untrusted text is displayed.
 
-A 3.3.0 sanitiza toda mensagem de erro antes de exibi-la e passa a reportar caracteres invalidos por code point, sem refletir o caractere bruto. Controles C0/C1, bidi e caracteres invisiveis tambem sao escapados na exibicao. PowerShell 7 e Windows Terminal suportam sequencias ANSI/VT, portanto essa camada precisa ser tratada como superficie de entrada quando texto nao confiavel e exibido.
+### Finding R2-02, offline password brute force, architectural risk
 
-### Finding R2-02, brute force offline por senha, risco de arquitetura
+Anyone who obtains a ciphertext can test passwords offline. There is no rate limit because there is no server. PBKDF2-HMAC-SHA256 with 600,000 iterations follows the current OWASP reference for PBKDF2 when FIPS-140 is a requirement, but Argon2id is preferred when available because it is memory-hard. Practical protection depends heavily on password entropy.
 
-Quem obtiver um ciphertext pode testar senhas offline. Nao existe rate limit, pois nao ha servidor. O PBKDF2-HMAC-SHA256 com 600.000 iteracoes atende a referencia atual da OWASP para PBKDF2 quando FIPS-140 e um requisito, mas Argon2id e preferivel quando disponivel por ser memory-hard. A protecao pratica depende fortemente da entropia da senha.
+### Finding R2-03, mutable CI dependencies, supply-chain risk, fixed in 3.3.0
 
-### Finding R2-03, dependencias mutaveis no CI, risco de cadeia de suprimentos, corrigido em 3.3.0
+The previous workflow used `actions/checkout@v4` by tag and installed modules by `MinimumVersion`. Tags and resolution to newer versions made CI execution less immutable and less reproducible. GitHub recommends pinning actions to a full SHA; version 3.3.0 pins `actions/checkout` to a specific commit and uses exact versions for Pester and PSScriptAnalyzer.
 
-O workflow anterior usava `actions/checkout@v4` por tag e instalava modulos por `MinimumVersion`. Tags e resolucao para versoes mais novas tornam a execucao do CI menos imutavel e menos reprodutivel. O GitHub recomenda fixar actions em SHA completo; a 3.3.0 fixa `actions/checkout` em um commit especifico e usa versoes exatas para Pester e PSScriptAnalyzer.
+### Added coverage
 
-### Cobertura adicionada
+The second round adds tests for malformed inputs, password length, plaintext limits, Base64 padding, salt/nonce/tag lengths, characters outside the alphabet, extra fields, terminal controls, bidi Unicode and basic parser fuzzing.
 
-A segunda rodada acrescenta testes para entradas malformadas, tamanho de senha, limite de plaintext, padding Base64, tamanhos de salt/nonce/tag, caracteres fora do alfabeto, campos extras, controles de terminal, Unicode bidi e fuzzing basico do parser.
+### Status
 
-### Estado
+The 3.3.0 changes were prepared, but the new-round tests still needed to be run in the maintainer's Windows/PowerShell environment. The earlier 6/6 result remained valid for 3.1.1 and was used as the baseline.
 
-As alteracoes de 3.3.0 estao preparadas, mas os testes da nova rodada ainda precisam ser executados no Windows/PowerShell do mantenedor. O resultado anterior de 6/6 permanece valido para a 3.1.1 e foi usado como linha de base.
+## Result of the second round
 
+The baseline supplied by the maintainer confirmed 6/6 tests, zero failures and zero errors on Windows 11. The second round should not replace that result; it extends it.
 
-## Resultado da segunda rodada
+### Reproducible exploit identified in 3.1.1
 
-A linha de base fornecida pelo mantenedor confirmou 6/6 testes, zero falhas e zero erros no Windows 11. A segunda rodada nao deve substituir esse resultado; ela o amplia.
+An attacker able to supply malformed code could insert terminal control characters into a field reflected by error messages. A conceptual example is a version field containing `ESC` followed by a CSI sequence. The previous decoding function included the received value in the exception and the interactive flow printed it directly. Windows Terminal and other hosts support ANSI/VT, so untrusted text output must be sanitised.
 
-### Exploit reproduzivel identificado na 3.1.1
+### Fix applied in 3.3.0
 
-Um atacante capaz de fornecer um codigo malformado podia inserir caracteres de controle terminal em um campo refletido por mensagens de erro. Exemplo conceitual: uma versao com `ESC` seguida de uma sequencia CSI. A funcao de decodificacao anterior incluia o valor recebido na excecao e o fluxo interativo o imprimia diretamente. Windows Terminal e outros hosts suportam ANSI/VT, portanto a saida de texto nao confiavel deve ser sanitizada.
+- error messages displayed in the console pass through `ConvertTo-SafeConsoleText`;
+- invalid-character diagnostics use `U+XXXX` instead of reflecting the raw character;
+- the rejected version is no longer reflected literally;
+- relevant C0/C1, bidirectional and invisible controls are escaped.
 
-### Correcao aplicada em 3.3.0
+### Baseline cryptographic result
 
-- mensagens de erro exibidas no console passam por `ConvertTo-SafeConsoleText`;
-- o diagnostico de caractere invalido usa `U+XXXX` em vez de refletir o caractere bruto;
-- a versao rejeitada nao e mais refletida literalmente;
-- controles C0/C1, bidirecionais e invisiveis relevantes sao escapados.
+The maintainer's report on 2026-09-25 confirms 6 tests, all with result `Success`, including Unicode round-trip, different ciphertext on successive executions, incorrect password, salt/tag/ciphertext tampering and rejection of formats other than SC4.
 
-### Resultado criptografico da linha de base
+### Residual risk: password
 
-O relatorio do mantenedor em 2026-09-25 confirma 6 testes, todos com resultado `Success`, incluindo round-trip Unicode, ciphertext diferente em execucoes sucessivas, senha incorreta, tampering de salt/tag/ciphertext e rejeicao de formatos diferentes de SC4.
+The main residual cryptographic risk is an offline attack against the password. PBKDF2-HMAC-SHA256 with 600,000 iterations is a configuration recognised by OWASP for PBKDF2 in FIPS scenarios, but Argon2id is preferred when available because it is memory-hard.
 
-### Risco residual: senha
+### Residual risk: CI and supply chain
 
-O principal risco criptografico residual e o ataque offline contra a senha. PBKDF2-HMAC-SHA256 com 600.000 iteracoes e uma configuracao reconhecida pela OWASP para PBKDF2 em cenarios FIPS, mas Argon2id e preferivel quando disponivel por ser memory-hard.
+Version 3.3.0 pins `actions/checkout` to a full SHA and pins the versions of modules used by the tests. GitHub recommends full SHAs for actions because tags can be moved.
 
-### Risco residual: CI e cadeia de suprimentos
+### Audit limits
 
-A 3.3.0 fixa `actions/checkout` em SHA completo e fixa as versoes dos modulos usados nos testes. O GitHub recomenda SHA completo para actions, pois tags podem ser movidas.
+There was no attempt to break AES-GCM or PBKDF2 mathematically. The assessment covers implementation, format, parser, terminal surface, memory/resources and supply chain. It is not an independent security certification.
 
-### Limites da auditoria
+## Third offensive security round, 2026-09-25
 
-Nao houve tentativa de quebrar AES-GCM ou PBKDF2 matematicamente. A avaliacao e de implementacao, formato, parser, superficie de terminal, memoria/recursos e cadeia de suprimentos. Nao e uma certificacao de seguranca independente.
+### R3-01, non-canonical Base64, low
 
+Some decoders accept non-zero padding bits, meaning more than one textual representation can produce the same bytes. Version 3.3.0 re-encodes each block and requires a case-sensitive match with the received representation.
 
-## Terceira rodada ofensiva, 2026-09-25
+### R3-02, accepted internal whitespace, low
 
-### R3-01, Base64 nao canonico, baixo
+The previous version removed internal whitespace before parsing, allowing different textual representations of the same code. Version 3.3.0 accepts only external whitespace through `Trim()` and rejects internal whitespace.
 
-Alguns decodificadores aceitam bits de padding nao-zero e, assim, mais de uma representacao textual pode produzir os mesmos bytes. A versao 3.3.0 re-encoda cada bloco e exige igualdade case-sensitive com a representacao recebida.
+### R3-03, password buffer, low
 
-### R3-02, whitespace interno aceito, baixo
+`Read-PasswordHidden` used a character list without explicit cleanup of the internal storage. Version 3.3.0 uses a `char[]` buffer, clears it in `finally` and returns only the required string. This reduces the persistence of a mutable copy, although PowerShell strings remain managed by the runtime.
 
-A versao anterior removia whitespace interno antes do parsing, permitindo representacoes textuais diferentes do mesmo codigo. A 3.3.0 aceita somente whitespace externo por `Trim()` e rejeita whitespace interno.
+### R3-04, dependency installer, medium
 
-### R3-03, buffer da senha, baixo
+The local installer accepted any minimum version and, for Pester, used `SkipPublisherCheck`. Version 3.3.0 pins Pester 6.2.0 and PSScriptAnalyzer 1.25.0, removes `SkipPublisherCheck` and does not alter the PSGallery trust policy.
 
-`Read-PasswordHidden` usava uma lista de caracteres sem limpeza explicita do armazenamento interno. A 3.3.0 utiliza um buffer `char[]`, limpa-o no `finally` e retorna somente a string necessaria. Isso reduz a persistencia de uma copia mutavel, embora strings do PowerShell continuem gerenciadas pelo runtime.
+### R3-05, fatal-path sanitisation, low
 
-### R3-04, instalador de dependencias, medio
+The final exception path still printed the raw message. Version 3.3.0 applies the same console sanitisation used by the other flows. PowerShell 7 supports ANSI/VT sequences in terminals, so untrusted text must not be reflected without treatment.
 
-O instalador local aceitava qualquer versao minima e, para Pester, usava `SkipPublisherCheck`. A 3.3.0 fixa Pester 6.2.0 e PSScriptAnalyzer 1.25.0, elimina `SkipPublisherCheck` e nao altera a politica de confianca da PSGallery.
+### R3-06, AAD, test added
 
-### R3-05, sanitizacao do caminho fatal, baixo
+The offensive suite now creates a ciphertext with valid fields but authenticates it with different AAD, then confirms that CipherVault rejects the message. This verifies that AAD is not merely documented but actually participates in GCM authentication.
 
-O caminho final de excecao ainda imprimia a mensagem bruta. A 3.3.0 aplica a mesma sanitizacao de console usada nos demais fluxos. PowerShell 7 suporta sequencias ANSI/VT em terminais, portanto texto nao confiavel nao deve ser refletido sem tratamento.
+### R3-07, residual password risk
 
-### R3-06, AAD, teste adicionado
+The offline dictionary attack remains the main residual cryptographic risk. PBKDF2-HMAC-SHA256 with 600,000 iterations is a configuration recognised by OWASP when PBKDF2 is used, but Argon2id is preferred when an appropriate dependency is acceptable.
 
-A suite ofensiva agora cria um ciphertext valido em todos os campos, mas autenticado com AAD diferente, e confirma que o CipherVault rejeita a mensagem. Isso verifica que AAD nao esta apenas documentada, mas efetivamente participa da autenticacao GCM.
+### R3-08, nonce per key
 
-### R3-07, risco residual de senha
+The project uses a random 96-bit nonce and a new random salt per message, which normally produces a new derived key for each ciphertext. The GCM IV uniqueness requirement remains relevant, as specified by NIST SP 800-38D. The suite adds a test covering eight distinct salt/nonce pairs per execution.
 
-O ataque offline de dicionario continua sendo o principal risco criptografico residual. PBKDF2-HMAC-SHA256 com 600.000 iteracoes e uma configuracao reconhecida pela OWASP quando PBKDF2 e utilizado, mas Argon2id e preferivel quando uma dependencia apropriada for aceitavel.
+### Residual supply-chain considerations
 
-### R3-08, nonce por chave
+GitHub recommends pinning Actions by full SHA. The workflow already uses a full SHA for checkout. For releases, signed tags and artifact attestations are also recommended to help verify artefact provenance.
 
-O projeto usa nonce aleatorio de 96 bits e um salt aleatorio novo por mensagem, o que normalmente produz uma nova chave derivada para cada ciphertext. A exigencia de unicidade de IV do GCM continua relevante, conforme NIST SP 800-38D. A suite adiciona um teste de oito pares salt/nonce distintos por execucao.
+## Fourth offensive security round, 2026-09-25
 
-### Supply chain residual
+### R4-01, Known Answer Test gap, fixed
 
-GitHub recomenda fixar Actions por SHA completo. O workflow ja usa SHA completo para checkout. Para releases, recomenda-se tambem assinatura de tags e artifact attestations, que permitem verificar a procedencia do artefato.
+Earlier suites mainly validated round-trip behaviour. This demonstrates internal consistency, but does not by itself prove that PBKDF2 and AES-GCM are producing values compatible with independent references.
 
+Version 3.4.1 adds known-answer vectors for PBKDF2-HMAC-SHA256 according to RFC 7914 and AES-256-GCM according to NIST vectors, allowing detection of an implementation that is internally consistent but algorithmically incorrect.
 
-## Quarta rodada ofensiva, 2026-09-25
+### R4-02, allocation before plaintext limit, hardening
 
-### R4-01, lacuna de Known Answer Tests, corrigida
-
-As suites anteriores validavam principalmente round-trip. Isso demonstra consistencia interna, mas nao prova por si so que PBKDF2 e AES-GCM estejam produzindo valores compativeis com referencias independentes.
-
-A 3.4.1 adiciona vetores conhecidos para PBKDF2-HMAC-SHA256 conforme RFC 7914 e AES-256-GCM conforme vetores NIST, permitindo detectar uma implementacao internamente consistente, porem algoritmicamente incorreta.
-
-### R4-02, alocacao antes do limite de plaintext, endurecimento
-
-A 3.3.0 convertia a string para UTF-8 antes de validar o limite em bytes. A 3.4.1 adiciona um preflight conservador pelo comprimento de caracteres antes da conversao e mantem a verificacao exata em bytes depois da conversao.
+Version 3.3.0 converted the string to UTF-8 before validating the byte limit. Version 3.4.1 adds a conservative preflight based on character length before conversion and keeps the exact byte-level check after conversion.
 
 ### R4-03, Unicode metamorphic testing
 
-Foram adicionados 25 round-trips deterministas com caracteres de diferentes blocos Unicode para exercitar serializacao UTF-8 e reversibilidade fora do conjunto de testes fixos.
+Twenty-five deterministic round-trips were added using characters from different Unicode blocks to exercise UTF-8 serialisation and reversibility beyond the fixed test set.
 
-### Resultado
+### Result
 
-Os testes novos precisam ser executados no Windows/PowerShell suportado. A aprovacao da rodada 4 exige PSScriptAnalyzer sem erros e todos os testes Pester passando.
+The new tests must be run in the supported Windows/PowerShell environment. Approval of round 4 requires PSScriptAnalyzer with no errors and all Pester tests passing.
 
+## Assessment of round 4
 
-## Avaliacao da rodada 4
+The main gap identified was methodological: previous round-trip tests could pass even if both internal ends shared the same error. Known Answer Tests address this gap by comparing the implementation with external reference vectors.
 
-A principal lacuna identificada foi metodologica: os testes de round-trip anteriores poderiam passar mesmo se as duas pontas internas compartilhassem o mesmo erro. Known Answer Tests resolvem essa lacuna ao comparar a implementacao com vetores externos de referencia.
+Round 4 does not introduce a new cryptographic construction. It increases verification independence and reduces an important class of false negatives in testing.
 
-A rodada 4 nao introduz uma nova construcao criptografica. Ela aumenta a independencia da verificacao e reduz uma classe importante de falsos negativos nos testes.
+## Post-execution correction for round 4, 2026-09-25
 
+Local execution of 3.4.1 on Windows 11 produced 35 cases, with 33 passes and 2 failures. Both failures occurred in the test code, not in an attempt to break CipherVault:
 
-## Correcao pos-execucao da rodada 4, 2026-09-25
+1. The PBKDF2-HMAC-SHA256 Known Answer Test used the RFC 7914 vector with `P="passwd"`, `S="salt"`, `c=1` and `dkLen=64`. The `Get-DerivedKey` helper had imposed a 16-byte minimum salt, artificially blocking the 4-byte vector. RFC 7914 defines the vector salt as a sequence of octets and provides that value specifically for verification. The SC4 format layer continues to require a 16-byte salt before application key derivation.
 
-A execucao local da 3.4.1 no Windows 11 produziu 35 casos, com 33 passagens e 2 falhas. As duas falhas ocorreram no codigo de teste, nao em uma tentativa de quebra do CipherVault:
+2. The Unicode test attempted to convert a code point in the U+1F300..U+1F64F range directly to `System.Char`. Code points above U+FFFF require a surrogate pair and must be converted as a code point with `Char.ConvertFromUtf32`. The test error was corrected.
 
-1. O Known Answer Test de PBKDF2-HMAC-SHA256 utilizava o vetor RFC 7914 com `P="passwd"`, `S="salt"`, `c=1` e `dkLen=64`. O helper `Get-DerivedKey` havia imposto 16 bytes como minimo de salt, bloqueando artificialmente o vetor de 4 bytes. O RFC 7914 define o salt do vetor como uma sequencia de octetos e fornece esse valor exatamente para verificacao. A camada do formato SC4 continua exigindo salt de 16 bytes antes da derivacao da chave da aplicacao.
+Neither failure demonstrates a vulnerability in AES-256-GCM or the SC4 format. They demonstrate that the verification infrastructure itself needed correction before the round 4 result could be used as evidence.
 
-2. O teste de Unicode tentava converter um code point no intervalo U+1F300..U+1F64F diretamente para `System.Char`. Code points acima de U+FFFF exigem um par surrogate e devem ser convertidos como code point com `Char.ConvertFromUtf32`. O erro foi corrigido no teste.
+Version 3.4.1 preserves the cryptographic parameters of 3.4.1 and requires a new full execution in the maintainer's Windows/PowerShell environment.
 
-Nenhuma dessas falhas demonstra uma vulnerabilidade no AES-256-GCM ou no formato SC4. Elas demonstram que a propria infraestrutura de verificacao precisava ser corrigida antes de usar o resultado da rodada 4 como evidencia.
+## Fifth offensive security round, 2026-09-25
 
-A 3.4.1 preserva os parametros criptograficos da 3.4.1 e exige nova execucao completa no Windows/PowerShell do mantenedor.
+### R5-01, case-insensitive format identifier, low, fixed in 3.5.0
 
+The PowerShell `-eq` operator is case-insensitive by default. The previous version could therefore accept `sc4` as the textual equivalent of `SC4`. This did not alter the cryptographic construction because the internal profile remained fixed to SC4, but it allowed more than one textual representation of the identifier. Version 3.5.0 uses case-sensitive comparison and adds a specific test.
 
-## Quinta rodada ofensiva, 2026-09-25
+### R5-02, incorrect declared compatibility, fixed in 3.5.0
 
-### R5-01, identificador de formato case-insensitive, baixo, corrigido em 3.5.0
+The code uses `AesGcm` with a constructor that explicitly receives the tag size. The .NET 8 documentation presents this constructor and recommends specifying the required tag size to avoid truncation ambiguities. Because PowerShell 7.4 is based on .NET 8, the documentation now requires PowerShell 7.4+.
 
-O operador `-eq` do PowerShell e case-insensitive por padrao. A versao anterior poderia aceitar `sc4` como equivalente textual de `SC4`. Isso nao alterava a construcao criptografica, pois o perfil interno continuava fixo em SC4, mas permitia mais de uma representacao textual do identificador. A 3.5.0 usa comparacao case-sensitive e adiciona teste especifico.
+### R5-03, release chain, fixed in 3.5.0
 
-### R5-02, compatibilidade declarada incorreta, corrigido em 3.5.0
+The release workflow now rejects tags that do not follow `vMAJOR.MINOR.PATCH`, preventing a tag name from being used directly as a file path without validation.
 
-O codigo usa `AesGcm` com construtor que recebe explicitamente o tamanho da tag. A documentacao do .NET 8 apresenta esse construtor e recomenda indicar o tamanho requerido da tag para evitar ambiguidades de truncamento. Como PowerShell 7.4 e baseado em .NET 8, a documentacao passa a exigir PowerShell 7.4+.
+### Added tests
 
-### R5-03, cadeia de release, corrigido em 3.5.0
+- reject `sc4` instead of `SC4`;
+- verify 16/12/16-byte sizes;
+- key separation between different salts;
+- password containing a code point outside U+FFFF;
+- truncation of ciphertext that remains valid Base64.
 
-O workflow de release passa a rejeitar tags que nao sigam `vMAJOR.MINOR.PATCH`, evitando que o nome de uma tag seja usado diretamente como caminho de arquivo sem validacao.
-
-### Testes adicionados
-
-- rejeicao de `sc4` em vez de `SC4`;
-- verificacao dos tamanhos 16/12/16 bytes;
-- separacao de chave entre salts diferentes;
-- senha com code point fora de U+FFFF;
-- truncamento de ciphertext que permanece Base64 valido.
-
-A rodada 5 ainda depende de execucao no ambiente Windows/PowerShell suportado antes de ser considerada aprovada.
+Round 5 still depends on execution in the supported Windows/PowerShell environment before it can be considered approved.

@@ -1,63 +1,60 @@
 # Security Policy
 
-## Escopo
+## Scope
 
-CipherVault e um aplicativo local de criptografia de mensagens. O objetivo e proteger confidencialidade e integridade contra pessoas que nao possuem a senha.
+CipherVault is a local message-encryption application. Its purpose is to protect confidentiality and integrity against people who do not possess the password.
 
-## Formato suportado
+## Supported format
 
-O unico formato criptografico aceito pelo aplicativo e o SC4. A versao 3.5.0 nao introduz um novo formato.
+The only cryptographic format accepted by the application is SC4. Version 3.5.0 does not introduce a new format.
 
-## Reporte de vulnerabilidades
+## Vulnerability reporting
 
-Nao publique detalhes de uma vulnerabilidade exploravel em uma issue publica antes de permitir uma correcao.
+Do not publish details of an exploitable vulnerability in a public issue before allowing time for a fix.
 
-Para um projeto publico no GitHub, configure o Private Vulnerability Reporting e use esse canal para reportes sensiveis.
+For a public GitHub project, configure Private Vulnerability Reporting and use that channel for sensitive reports.
 
-Inclua, quando possivel:
+Where possible, include:
 
-- versao do CipherVault;
-- sistema operacional;
-- versao do PowerShell;
-- passos para reproduzir;
-- entrada ou ciphertext de teste;
-- impacto observado.
+- CipherVault version;
+- operating system;
+- PowerShell version;
+- reproduction steps;
+- test input or ciphertext;
+- observed impact.
 
-## Modelo de seguranca
+## Security model
 
-CipherVault assume:
+CipherVault assumes:
 
-- que a senha e secreta e suficientemente forte;
-- que o endpoint local nao esta comprometido;
-- que o usuario confere a origem dos scripts/releases;
-- que clipboard e terminal podem expor informacoes conforme a configuracao do sistema.
+- the password is secret and sufficiently strong;
+- the local endpoint is not compromised;
+- the user verifies the origin of scripts/releases;
+- the clipboard and terminal may expose information according to system configuration.
 
-CipherVault nao protege contra:
+CipherVault does not protect against:
 
 - keyloggers;
-- malware com acesso ao processo ou memoria;
-- captura de tela;
-- comprometimento do sistema operacional;
-- senha fraca ou reutilizada;
-- vazamento voluntario da senha.
+- malware with access to the process or memory;
+- screen capture;
+- operating-system compromise;
+- weak or reused passwords;
+- deliberate password disclosure.
 
-## Status de auditoria
+## Audit status
 
-A revisao disponivel no repositorio e uma auditoria de codigo-fonte assistida, nao uma certificacao independente. Nao use o termo "security audited" ou equivalente para representar uma auditoria de terceira parte que nao ocorreu.
+The review available in the repository is an assisted source-code audit, not an independent certification. Do not use the term "security audited" or an equivalent to represent a third-party audit that did not take place.
 
+## Security testing
 
-## Testes de seguranca
+The project contains cryptographic integrity tests and an additional offensive suite covering parsing, limits, terminal controls and Unicode. Local execution results must be distinguished from an independent audit.
 
-O projeto possui testes de integridade criptografica e uma suite ofensiva adicional para parsing, limites, controles de terminal e Unicode. Resultados de uma execucao local devem ser distinguidos de uma auditoria independente.
+## Publication and provenance
 
+For public releases, prefer signed tags and publish artefact hashes. GitHub provides signed-tag/commit verification and artifact attestations to link an artefact to the workflow and commit that produced it.
 
-## Publicacao e procedencia
+## Threat model
 
-Para releases publicas, prefira tags assinadas e publique os hashes dos artefatos. GitHub oferece verificacao de tags/commits assinados e artifact attestations para vincular um artefato ao workflow e ao commit que o produziu.
+See `THREAT-MODEL.md` for the provided properties and known limitations, including identity authentication, replay, clipboard, local memory and offline attacks against the password.
 
-
-## Modelo de ameacas
-
-Consulte `THREAT-MODEL.md` para as propriedades fornecidas e as limitacoes conhecidas, incluindo autenticacao de identidade, replay, clipboard, memoria local e ataques offline contra a senha.
-
-Para releases publicas, recomenda-se habilitar secret scanning e push protection no repositorio. O GitHub documenta push protection como uma medida preventiva que bloqueia secrets detectados antes que cheguem ao repositorio.
+For public releases, it is recommended to enable secret scanning and push protection in the repository. GitHub documents push protection as a preventive measure that blocks detected secrets before they reach the repository.

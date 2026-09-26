@@ -29,13 +29,13 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $version = '${{ github.ref_name }}'
           if ($version -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') {
-            throw "Tag de release invalida: '$version'. Use vMAJOR.MINOR.PATCH."
+            throw "Invalid release tag: '$version'. Use vMAJOR.MINOR.PATCH."
           }
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           $tracked = @(git ls-files)
-          if ($LASTEXITCODE -ne 0 -or $tracked.Count -eq 0) { throw 'Nao foi possivel obter os arquivos versionados.' }
+          if ($LASTEXITCODE -ne 0 -or $tracked.Count -eq 0) { throw 'Unable to obtain the versioned files.' }
           $sensitive = @($tracked | Where-Object { $_ -match '(?i)(^|/)(\.env(?:\.|$)|credentials?|secrets?|tokens?)(?:/|$)' -or $_ -match '(?i)\.(pem|pfx|p12|key)$' -or $_ -eq 'test-results.xml' })
-          if ($sensitive.Count -gt 0) { throw "Arquivos sensiveis/locais detectados no release: $($sensitive -join ', ')" }
+          if ($sensitive.Count -gt 0) { throw "Sensitive/local files detected in release: $($sensitive -join ', ')" }
           $paths = @($tracked | ForEach-Object { Join-Path (Get-Location) $_ })
           Compress-Archive -Path $paths -DestinationPath "dist/CipherVault-$version.zip" -Force
           $hash = (Get-FileHash "dist/CipherVault-$version.zip" -Algorithm SHA256).Hash.ToLowerInvariant()

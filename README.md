@@ -110,36 +110,10 @@ The results should be reproduced in the supported Windows/PowerShell environment
 
 The 3.1.1 baseline was run on Windows 11 with Pester 6.2.0 and PSScriptAnalyzer 1.25.0: 6 tests passed, with no failures or errors. Version 3.3.0 added a second layer of offensive security tests and fixed a control-character reflection issue in the terminal error path. See `SECURITY-AUDIT.md` for scope and limitations.
 
-## Offensive security testing, round 3
-
-Version 3.4.1 expanded testing for Base64 canonicalisation, internal whitespace, AAD, input limits, observable salt/nonce randomness, additional Unicode sanitisation and hardening of the development-tool installation process.
-
-Version 3.4.1 continued to use the SC4 format exclusively and retained AES-256-GCM with PBKDF2-HMAC-SHA256.
-
-## Offensive security testing, round 4
-
-Version 3.4.1 added independent known-answer tests (KATs) for PBKDF2-HMAC-SHA256 and AES-256-GCM, as well as random Unicode round-trips. Version 3.4.1 also fixed two defects in the test suite identified during execution: the RFC 7914 vector uses a 4-byte salt, while the internal routine required 16 bytes, and the Unicode test attempted to convert code points above U+FFFF directly to `char`.
-
-### Technical references
-
-- RFC 7914, PBKDF2-HMAC-SHA256 test vector.
-- NIST SP 800-38D, GCM and IV/nonce requirements.
-- OWASP Password Storage Cheat Sheet, PBKDF2 parameters.
-
-## Offensive security testing, round 5
-
-Version 3.5.0 added case-sensitive validation of the SC4 identifier, structural size checks after decoding, key separation testing by salt, Unicode passwords outside the BMP and truncation testing for ciphertext that remains syntactically valid.
-
-Version 3.5.0 also declared PowerShell 7.4+ as the minimum requirement. This corresponds to use of the `AesGcm` constructor that accepts the tag size explicitly, available in .NET 8+, which underpins PowerShell 7.4.
-
 ## Threat model
 
-See `THREAT-MODEL.md`. CipherVault protects confidentiality and integrity, but does not provide identity authentication or anti-replay protection. The password remains the primary factor determining resistance to offline attacks.
-
-## Offensive security testing, round 6
-
-Version 3.6.0 consolidated the threat-model review and hardened GitHub publication. A repository audit was added to detect sensitive files, high-confidence credential patterns and references to the legacy SC3 format. The release workflow avoids including local test artefacts.
+See `THREAT-MODEL.md`. CipherVault protects confidentiality and integrity, but does not provide identity authentication or anti-replay protection. The password remains the main factor affecting resistance to offline attacks.
 
 ## Repository audit, 3.6.2
 
-`Invoke-RepositoryAudit.ps1` works both inside a Git repository and in a working tree that has not yet been initialised as a Git repository. In a Git repository, it analyses versioned files. Outside Git, it analyses local files and explicitly reports that limitation.
+`Invoke-RepositoryAudit.ps1` works both in a Git repository and in a working tree that has not yet been initialised. In a Git repository, it analyses versioned files. Outside Git, it analyses local files and explicitly reports that limitation.

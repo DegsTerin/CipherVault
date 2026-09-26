@@ -4,7 +4,7 @@ BeforeAll {
 }
 
 Describe 'CipherVault' {
-    It 'mantem Base64 personalizado reversivel' {
+    It 'keeps custom Base64 reversible' {
         $sizes = @(1,2,3,16,31,32,127,256)
         foreach ($size in $sizes) {
             [byte[]]$raw = New-RandomBytes -Length $size
@@ -14,72 +14,72 @@ Describe 'CipherVault' {
         }
     }
 
-    It 'faz round-trip de texto Unicode' {
+    It 'performs a Unicode text round-trip' {
         $password = 'UnitTest#CipherVault!2026'
-        $text = "Bruno áéíóú ãõ ç`r`nLinha 2"
+        $text = "Bruno áéíóú ãõ ç`r`nLine 2"
         $encoded = Protect-SecretMessage -PlainText $text -Password $password
         (Unprotect-SecretMessage -EncodedText $encoded -Password $password) | Should -Be $text
     }
 
-    It 'gera ciphertext diferente em execucoes sucessivas' {
+    It 'generates different ciphertext on successive executions' {
         $password = 'UnitTest#CipherVault!2026'
-        $text = 'mesma mensagem'
+        $text = 'same message'
         $a = Protect-SecretMessage -PlainText $text -Password $password
         $b = Protect-SecretMessage -PlainText $text -Password $password
         $a | Should -Not -Be $b
     }
 
-    It 'rejeita senha incorreta' {
-        $encoded = Protect-SecretMessage -PlainText 'teste' -Password 'UnitTest#CipherVault!2026'
-        { Unprotect-SecretMessage -EncodedText $encoded -Password 'SenhaErrada#2026!' } | Should -Throw '*Falha de autenticacao*'
+    It 'rejects an incorrect password' {
+        $encoded = Protect-SecretMessage -PlainText 'test' -Password 'UnitTest#CipherVault!2026'
+        { Unprotect-SecretMessage -EncodedText $encoded -Password 'WrongPassword#2026!' } | Should -Throw '*Authentication failed*'
     }
 
-    It 'rejeita tampering do salt, tag e ciphertext' {
+    It 'rejects tampering of the salt, tag and ciphertext' {
         $password = 'UnitTest#CipherVault!2026'
-        $encoded = Protect-SecretMessage -PlainText 'teste' -Password $password
+        $encoded = Protect-SecretMessage -PlainText 'test' -Password $password
         foreach ($component in @(1,3,4)) {
             $tampered = New-TamperedCipherText -EncodedText $encoded -Component $component
-            { Unprotect-SecretMessage -EncodedText $tampered -Password $password } | Should -Throw '*Falha de autenticacao*'
+            { Unprotect-SecretMessage -EncodedText $tampered -Password $password } | Should -Throw '*Authentication failed*'
         }
     }
 
-    It 'rejeita formatos que nao sejam SC4' {
+    It 'rejects formats other than SC4' {
         $password = 'UnitTest#CipherVault!2026'
-        $encoded = Protect-SecretMessage -PlainText 'teste' -Password $password
+        $encoded = Protect-SecretMessage -PlainText 'test' -Password $password
         $parts = $encoded -split '\.', 5
         $parts[0] = 'SC9'
-        { Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password } | Should -Throw '*Versao nao suportada*'
+        { Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password } | Should -Throw '*Unsupported version*'
     }
 
-    It 'rejeita senha abaixo do limite' {
-        { Assert-Password -Password '12345678901' } | Should -Throw '*pelo menos 12 caracteres*'
+    It 'rejects a password below the limit' {
+        { Assert-Password -Password '12345678901' } | Should -Throw '*at least 12 characters*'
     }
 
-    It 'rejeita senha acima do limite' {
-        { Assert-Password -Password ('A' * 257) } | Should -Throw '*excede o limite de 256*'
+    It 'rejects a password above the limit' {
+        { Assert-Password -Password ('A' * 257) } | Should -Throw '*exceeds the 256-character limit*'
     }
 
-    It 'rejeita formato sem cinco campos' {
-        { Unprotect-SecretMessage -EncodedText 'SC4.a.b.c' -Password 'UnitTest#CipherVault!2026' } | Should -Throw '*Formato invalido*'
+    It 'rejects a format without five fields' {
+        { Unprotect-SecretMessage -EncodedText 'SC4.a.b.c' -Password 'UnitTest#CipherVault!2026' } | Should -Throw '*Invalid format*'
     }
 
-    It 'rejeita Base64 com padding malformado' {
+    It 'rejects Base64 with malformed padding' {
         $password = 'UnitTest#CipherVault!2026'
-        $encoded = Protect-SecretMessage -PlainText 'teste' -Password $password
+        $encoded = Protect-SecretMessage -PlainText 'test' -Password $password
         $parts = $encoded -split '\.', 5
         $parts[1] = ('!' * 22) + '=!'
-        { Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password } | Should -Throw '*padding malformado*'
+        { Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password } | Should -Throw '*malformed padding*'
     }
 
-    It 'rejeita ciphertext vazio' {
+    It 'rejects empty ciphertext' {
         $password = 'UnitTest#CipherVault!2026'
-        $encoded = Protect-SecretMessage -PlainText 'teste' -Password $password
+        $encoded = Protect-SecretMessage -PlainText 'test' -Password $password
         $parts = $encoded -split '\.', 5
         $parts[4] = ''
-        { Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password } | Should -Throw '*Ciphertext vazio*'
+        { Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password } | Should -Throw '*Empty ciphertext*'
     }
 
-    It 'escapa controles C0 C1 e Unicode invisivel para exibicao no terminal' {
+    It 'escapes C0/C1 controls and invisible Unicode for terminal display' {
         $input = ([char]27) + '[2J' + ([char]155) + '31m' + ([char]0x202E) + 'TRUSTED' + ([char]0x200B)
         $safe = ConvertTo-SafeConsoleText -Text $input
         $safe | Should -Not -Match ([char]27)
@@ -92,14 +92,14 @@ Describe 'CipherVault' {
         $safe | Should -Match '\\u200B'
     }
 
-    It 'rejeita dados estruturais com caractere de controle sem refletir o caractere bruto na excecao' {
+    It 'rejects structural data containing a control character without reflecting the raw character in the exception' {
         $password = 'UnitTest#CipherVault!2026'
-        $encoded = Protect-SecretMessage -PlainText 'teste' -Password $password
+        $encoded = Protect-SecretMessage -PlainText 'test' -Password $password
         $parts = $encoded -split '\.', 5
         $parts[0] = 'SC9' + ([char]27) + '[2J'
         try {
             [void](Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password)
-            throw 'Teste deveria falhar.'
+            throw 'Test should have failed.'
         }
         catch {
             $_.Exception.Message | Should -Not -Match ([char]27)
@@ -108,8 +108,8 @@ Describe 'CipherVault' {
 
     AfterAll {
         Write-Host ''
-        Write-Host '  CIPHERVAULT | TESTES FINALIZADOS' -ForegroundColor Cyan
-        Write-Host '  A suite de testes foi executada ate o fim.' -ForegroundColor DarkGray
+        Write-Host '  CIPHERVAULT | TESTS COMPLETED' -ForegroundColor Cyan
+        Write-Host '  The test suite ran to completion.' -ForegroundColor DarkGray
         Write-Host ''
     }
 }

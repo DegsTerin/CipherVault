@@ -12,7 +12,7 @@ Write-Host '== CipherVault repository audit ==' -ForegroundColor Cyan
 Write-Host
 
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-    throw 'Git nao esta instalado ou nao esta no PATH.'
+    throw 'Git is not installed or is not in PATH.'
 }
 
 $isGitRepository = $false
@@ -31,9 +31,9 @@ catch {
 
 if ($isGitRepository) {
     if ($tracked.Count -eq 0) {
-        throw 'Repositorio Git sem arquivos versionados. Adicione os arquivos seguros ao indice antes da auditoria.'
+        throw 'Git repository has no versioned files. Add the safe files to the index before running the audit.'
     }
-    Write-Host 'Modo: arquivos versionados pelo Git' -ForegroundColor DarkGray
+    Write-Host 'Mode: files versioned by Git' -ForegroundColor DarkGray
 }
 else {
     $tracked = @(
@@ -45,10 +45,10 @@ else {
             ForEach-Object { [IO.Path]::GetRelativePath($root, $_.FullName).Replace([IO.Path]::DirectorySeparatorChar, '/') }
     )
     if ($tracked.Count -eq 0) {
-        throw 'Nenhum arquivo encontrado para auditar.'
+        throw 'No files found to audit.'
     }
-    Write-Host 'Modo: working tree (diretorio ainda nao inicializado como repositorio Git)' -ForegroundColor Yellow
-    Write-Host 'Aviso: a auditoria sera completa sobre os arquivos locais, mas nao verifica o estado do indice Git.' -ForegroundColor Yellow
+    Write-Host 'Mode: working tree (directory has not yet been initialised as a Git repository)' -ForegroundColor Yellow
+    Write-Host 'Warning: the audit covers all local files, but does not verify the Git index state.' -ForegroundColor Yellow
 }
 
 $forbiddenPaths = @(
@@ -60,7 +60,7 @@ $forbiddenPaths = @(
 $pathFindings = foreach ($path in $tracked) {
     foreach ($pattern in $forbiddenPaths) {
         if ($path -match $pattern) {
-            [pscustomobject]@{ Type='Path'; Path=$path; Finding='Arquivo sensivel versionado' }
+            [pscustomobject]@{ Type='Path'; Path=$path; Finding='Sensitive versioned file' }
             break
         }
     }
@@ -95,13 +95,13 @@ foreach ($path in $tracked) {
             $findings += [pscustomobject]@{
                 Type='Content'
                 Path=$path
-                Finding="Possivel $($item.Key)"
+                Finding="Possible $($item.Key)"
             }
         }
     }
 
     if ($text -match '(?m)^\s*(?:SC3)\b') {
-        $findings += [pscustomobject]@{ Type='Content'; Path=$path; Finding='Referencia a formato legado SC3' }
+        $findings += [pscustomobject]@{ Type='Content'; Path=$path; Finding='Reference to legacy SC3 format' }
     }
 }
 
@@ -109,14 +109,14 @@ $forbiddenExtensions = @('.pem','.pfx','.p12','.key')
 $forbiddenTracked = @($tracked | Where-Object { $forbiddenExtensions -contains ([IO.Path]::GetExtension($_).ToLowerInvariant()) })
 
 if ($forbiddenTracked.Count -gt 0) {
-    $findings += $forbiddenTracked | ForEach-Object { [pscustomobject]@{ Type='Path'; Path=$_; Finding='Extensao sensivel versionada' } }
+    $findings += $forbiddenTracked | ForEach-Object { [pscustomobject]@{ Type='Path'; Path=$_; Finding='Sensitive versioned extension' } }
 }
 
 if ($findings.Count -gt 0) {
-    Write-Host 'AUDITORIA DE REPOSITORIO: FALHOU' -ForegroundColor Red
+    Write-Host 'REPOSITORY AUDIT: FAILED' -ForegroundColor Red
     $findings | Sort-Object Path, Finding | Format-Table -AutoSize | Out-String | Write-Host
     exit 1
 }
 
-Write-Host 'AUDITORIA DE REPOSITORIO: OK' -ForegroundColor Green
-Write-Host "Arquivos versionados analisados: $($tracked.Count)" -ForegroundColor Green
+Write-Host 'REPOSITORY AUDIT: OK' -ForegroundColor Green
+Write-Host "Versioned files analysed: $($tracked.Count)" -ForegroundColor Green

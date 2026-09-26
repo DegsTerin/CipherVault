@@ -1,8 +1,8 @@
-# Desenvolvimento
+# Development
 
-## Ambiente
+## Environment
 
-- PowerShell 7.4++
+- PowerShell 7.4+
 - Pester 6.2.0
 - PSScriptAnalyzer 1.25.0
 
@@ -13,32 +13,28 @@ Get-ChildItem -Recurse -File -Filter *.ps1 | Unblock-File
 .\tools\Invoke-Checks.ps1
 ```
 
-A suite ofensiva adicional fica em `tests/CipherVault.Security.Tests.ps1`.
+The additional offensive security suite is in `tests/CipherVault.Security.Tests.ps1`.
 
-## Cadeia de suprimentos do CI
+## CI supply chain
 
-O workflow fixa a action de checkout por SHA completo e fixa as versoes dos modulos de teste. O Dependabot monitora atualizacoes das GitHub Actions.
+The workflow pins the checkout action to a full SHA and pins the test-module versions. Dependabot monitors GitHub Actions updates.
 
+## Pinned versions
 
-## Versoes fixadas
+Local checks and CI use Pester 6.2.0 and PSScriptAnalyzer 1.25.0 to make results reproducible.
 
-Os checks locais e o CI usam Pester 6.2.0 e PSScriptAnalyzer 1.25.0 para tornar os resultados reproduziveis.
-
-
-A rodada 4 adiciona Known Answer Tests para PBKDF2-HMAC-SHA256 e AES-256-GCM, alem de testes Unicode aleatorios.
-
+Round 4 adds Known Answer Tests for PBKDF2-HMAC-SHA256 and AES-256-GCM, together with random Unicode tests.
 
 ## 3.4.1
 
-A 3.4.1 corrige dois defeitos do conjunto de testes da 3.4.1 encontrados durante execucao real: o KAT RFC 7914 com salt curto e a geracao de Unicode suplementar.
+Version 3.4.1 fixes two defects in its own test suite found during real execution: the RFC 7914 KAT with a short salt and the generation of supplementary Unicode characters.
 
+## Repository audit
 
-## Auditoria do repositorio
-
-Antes de publicar, execute:
+Before publishing, run:
 
 ```powershell
 .\tools\Invoke-RepositoryAudit.ps1
 ```
 
-A auditoria procura arquivos sensiveis, alguns padroes de credenciais de alta confianca, `test-results.xml` e referencias ao formato legado SC3. Em um repositorio Git, usa os arquivos versionados; fora do Git, analisa o working tree e informa a limitacao.
+The audit looks for sensitive files, selected high-confidence credential patterns, `test-results.xml` and references to the legacy SC3 format. In a Git repository, it uses versioned files; outside Git, it analyses the working tree and reports that limitation.

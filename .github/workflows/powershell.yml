@@ -24,7 +24,7 @@ jobs:
         shell: pwsh
         run: |
           if ([version]$PSVersionTable.PSVersion -lt [version]'7.4') {
-            throw "PowerShell 7.4+ e obrigatorio. Versao detectada: $($PSVersionTable.PSVersion)"
+            throw "PowerShell 7.4+ is required. Detected version: $($PSVersionTable.PSVersion)"
           }
 
       - name: Setup PowerShell modules

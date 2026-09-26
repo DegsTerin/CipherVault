@@ -17,4 +17,4 @@ if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer | Where-Object { $_.V
 }
 
 Write-Host
-Write-Host 'Dependencias instaladas.' -ForegroundColor Green
+Write-Host 'Dependencies installed.' -ForegroundColor Green

@@ -1,152 +1,145 @@
 # CipherVault 3.6.2
 
-Sistema local de criptografia de mensagens em PowerShell 7.4+, executado exclusivamente no terminal.
+Local message encryption system written in PowerShell 7.4+, designed to run exclusively in the terminal.
 
-## Criptografia
+## Cryptography
 
 - AES-256-GCM
 - PBKDF2-HMAC-SHA256
-- 600.000 iteracoes
-- Salt aleatorio de 16 bytes
-- Nonce aleatorio de 12 bytes
-- Tag GCM de 16 bytes
-- Chave derivada de 32 bytes
-- AAD vinculando formato, algoritmo e parametros criptograficos
+- 600,000 iterations
+- 16-byte random salt
+- 12-byte random nonce
+- 16-byte GCM tag
+- 32-byte derived key
+- AAD binding the format, algorithm and cryptographic parameters
 
-O alfabeto personalizado apenas remapeia o Base64. Ele nao aumenta a seguranca criptografica.
+The custom alphabet only remaps Base64. It does not increase cryptographic security.
 
-## Formato
+## Format
 
-O unico formato suportado e:
+The only supported format is:
 
 ```text
 SC4.salt.nonce.tag.ciphertext
 ```
 
-Mensagens com outros identificadores de formato sao rejeitadas.
+Messages using other format identifiers are rejected.
 
-## Limites
+## Limits
 
-- Senha: 12 a 256 caracteres
-- Mensagem: ate 8 MiB em UTF-8
-- Ciphertext: ate 8 MiB
-- Texto codificado recebido: ate 16 MiB
+- Password: 12 to 256 characters
+- Message: up to 8 MiB in UTF-8
+- Ciphertext: up to 8 MiB
+- Received encoded text: up to 16 MiB
 
-O minimo de 12 caracteres nao garante boa entropia. Prefira senhas longas e aleatorias.
+A minimum of 12 characters does not guarantee good entropy. Prefer long, random passwords.
 
-## Recursos
+## Features
 
 ```text
-[1] Criptografar mensagem
-[2] Criptografar texto da area de transferencia
-[3] Descriptografar mensagem
-[4] Sobre / parametros
-[0] Sair
+[1] Encrypt message
+[2] Encrypt clipboard text
+[3] Decrypt message
+[4] About / parameters
+[0] Exit
 ```
 
-Nao existem Windows Forms, WPF ou animacoes.
+There are no Windows Forms, WPF or animations.
 
-## Execucao
+## Running
 
 ```powershell
 pwsh -NoProfile -File .\CipherVault.ps1
 ```
 
-Se o Windows bloquear scripts baixados, remova a marca de origem somente dos arquivos do projeto:
+If Windows blocks downloaded scripts, remove the mark of the web only from project files:
 
 ```powershell
 Get-ChildItem -Recurse -File -Filter *.ps1 | Unblock-File
 ```
 
-## Testes e analise
+## Testing and analysis
 
-Instale as ferramentas de desenvolvimento:
+Install the development tools:
 
 ```powershell
 .\tools\Install-DevDependencies.ps1
 ```
 
-Execute a verificacao completa:
+Run the complete verification:
 
 ```powershell
 .\tools\Invoke-Checks.ps1
 ```
 
-Ou execute a suite diretamente:
+Or run the test suite directly:
 
 ```powershell
 Invoke-Pester .\tests
 ```
 
-Apos a execucao da suite, o projeto exibe uma mensagem explicita de finalizacao dos testes.
+After the test suite runs, the project displays an explicit test completion message.
 
-O `Invoke-Checks.ps1` exibe ao final os contadores reais lidos do relatorio XML, por exemplo `Testes passados : 6` e `Falhas : 0`.
+`Invoke-Checks.ps1` reports the actual counters read from the XML report, for example `Tests passed : 6` and `Failures : 0`.
 
-Para analise estatica:
+For static analysis:
 
 ```powershell
 Invoke-ScriptAnalyzer -Path .\CipherVault.ps1 -Severity Error
 ```
 
-## Seguranca
+## Security
 
-Nao apresente o projeto como "inquebravel", "militar" ou como auditado por terceiros sem evidencia independente.
+Do not present the project as "unbreakable", "military-grade", or as having been audited by third parties without independent evidence.
 
-A seguranca depende da senha e de um endpoint local nao comprometido. Terminal, clipboard, keyloggers, malware local e capturas de tela ficam fora do escopo criptografico.
+Security depends on the password and a local endpoint that has not been compromised. The terminal, clipboard, keyloggers, local malware and screen capture are outside the cryptographic scope.
 
-Consulte `SECURITY.md` e `SECURITY-AUDIT.md`.
+See `SECURITY.md` and `SECURITY-AUDIT.md`.
 
 ## CI
 
-O GitHub Actions executa PSScriptAnalyzer e Pester em `windows-latest` a cada push e pull request.
+GitHub Actions runs PSScriptAnalyzer and Pester on `windows-latest` for every push and pull request.
 
+## Offensive security testing
 
-## Auditoria ofensiva
+Version 3.3.0 introduced a second round of security testing focused on malformed inputs, resource limits, terminal controls, invisible/bidi Unicode and basic parser fuzzing. See `SECURITY-AUDIT.md`.
 
-A versao 3.3.0 inclui uma segunda rodada de testes de seguranca focada em entradas malformadas, limites de recursos, controles de terminal, Unicode invisivel/bidi e fuzzing basico do parser. Veja `SECURITY-AUDIT.md`.
+The results should be reproduced in the supported Windows/PowerShell environment before any definitive release.
 
-Os resultados precisam ser reproduzidos no ambiente Windows/PowerShell suportado antes de qualquer release definitivo.
+## Security status
 
+The 3.1.1 baseline was run on Windows 11 with Pester 6.2.0 and PSScriptAnalyzer 1.25.0: 6 tests passed, with no failures or errors. Version 3.3.0 added a second layer of offensive security tests and fixed a control-character reflection issue in the terminal error path. See `SECURITY-AUDIT.md` for scope and limitations.
 
-## Estado de seguranca
+## Offensive security testing, round 3
 
-A linha de base 3.1.1 foi executada no Windows 11 com Pester 6.2.0 e PSScriptAnalyzer 1.25.0: 6 testes passaram, sem falhas ou erros. A 3.3.0 adiciona uma segunda camada de testes ofensivos e corrige uma vulnerabilidade de reflexao de caracteres de controle no caminho de erro do terminal. Consulte `SECURITY-AUDIT.md` para o escopo e as limitacoes.
+Version 3.4.1 expands the tests to Base64 canonicalisation, internal whitespace, AAD, input limits, observable salt/nonce randomness, additional Unicode sanitisation and hardening of the development-tool installation.
 
-## Auditoria ofensiva, rodada 3
+Version 3.4.1 continues to use only the SC4 format and retains AES-256-GCM with PBKDF2-HMAC-SHA256.
 
-A versao 3.4.1 amplia os testes para canonicalizacao Base64, whitespace interno, AAD, limites de entrada, aleatoriedade observavel de salt/nonce, sanitizacao adicional de Unicode e endurecimento da instalacao das ferramentas de desenvolvimento.
+## Offensive security testing, round 4
 
-A versao 3.4.1 continua usando exclusivamente o formato SC4 e mantem AES-256-GCM com PBKDF2-HMAC-SHA256.
+Version 3.4.1 added independent known-answer tests (KATs) for PBKDF2-HMAC-SHA256 and AES-256-GCM, plus random Unicode round-trips. Version 3.4.1 also fixed two defects in its own test suite revealed during execution: RFC 7914 uses a 4-byte salt in its vector, while the internal routine required 16 bytes, and the Unicode test attempted to convert code points above U+FFFF directly to `char`.
 
+### Technical references
 
-## Auditoria ofensiva, rodada 4
+- RFC 7914, PBKDF2-HMAC-SHA256 test vector.
+- NIST SP 800-38D, GCM and IV/nonce requirements.
+- OWASP Password Storage Cheat Sheet, PBKDF2 parameters.
 
-A 3.4.1 acrescentou testes conhecidos (KATs) independentes para PBKDF2-HMAC-SHA256 e AES-256-GCM, alem de round-trips Unicode aleatorios. A 3.4.1 corrige dois defeitos no proprio conjunto de testes revelados pela execucao da 3.4.1: o vetor RFC 7914 usa um salt de 4 bytes, enquanto a rotina interna exigia 16 bytes, e o teste Unicode tentava converter code points acima de U+FFFF diretamente para char.
+## Offensive security testing, round 5
 
+Version 3.5.0 adds case-sensitive validation of the SC4 identifier, verifies structural sizes after decoding, tests key separation by salt, Unicode passwords outside the BMP and truncation of ciphertext that remains syntactically valid.
 
-### Referencias tecnicas
+Version 3.5.0 also declares PowerShell 7.4+ as the minimum requirement. This corresponds to using the `AesGcm` constructor that explicitly receives the tag size, available in .NET 8+, which underlies PowerShell 7.4.
 
-- RFC 7914, vetor de teste para PBKDF2-HMAC-SHA256.
-- NIST SP 800-38D, GCM e requisitos de IV/nonce.
-- OWASP Password Storage Cheat Sheet, parametros de PBKDF2.
+## Threat model
 
+See `THREAT-MODEL.md`. CipherVault protects confidentiality and integrity, but does not provide identity authentication or anti-replay protection. The password remains the main factor affecting resistance to offline attacks.
 
-## Auditoria ofensiva, rodada 5
+## Offensive security testing, round 6
 
-A 3.5.0 adiciona validação case-sensitive do identificador SC4, verifica tamanhos estruturais após decodificação, testa separação de chave por salt, senha Unicode fora do BMP e truncamento de ciphertext ainda sintaticamente válido.
+Version 3.6.0 consolidates the threat-model review and hardens GitHub publication. A repository audit was added to detect sensitive files, high-confidence credential patterns and references to the legacy SC3 format. The release workflow avoids including local test artefacts.
 
-A 3.5.0 também declara PowerShell 7.4+ como requisito mínimo. Isso corresponde ao uso do construtor `AesGcm` que recebe explicitamente o tamanho da tag, disponível no .NET 8+, base do PowerShell 7.4.
+## Repository audit, 3.6.2
 
-
-## Modelo de ameacas
-
-Consulte `THREAT-MODEL.md`. CipherVault protege confidencialidade e integridade, mas nao fornece autenticacao de identidade nem protecao anti-replay. A senha continua sendo o principal fator de resistencia a ataques offline.
-
-## Auditoria ofensiva, rodada 6
-
-A 3.6.0 consolida a revisao de modelo de ameacas e endurece a publicacao no GitHub. Foi adicionada uma auditoria de repositorio para detectar arquivos sensiveis, padroes de credenciais de alta confianca e referencias ao formato legado SC3. O workflow de release evita incluir artefatos de teste locais.
-
-
-## Auditoria do repositorio, 3.6.2
-
-`Invoke-RepositoryAudit.ps1` funciona tanto em um repositorio Git quanto em um working tree ainda nao inicializado. Em um repositorio Git, analisa os arquivos versionados. Fora do Git, analisa os arquivos locais e informa explicitamente essa limitacao.
+`Invoke-RepositoryAudit.ps1` works both in a Git repository and in a working tree that has not yet been initialised. In a Git repository, it analyses versioned files. Outside Git, it analyses local files and explicitly reports that limitation.

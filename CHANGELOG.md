@@ -1,7 +1,7 @@
 # Changelog
 
 ## 3.6.2
-- Corrigido `Invoke-RepositoryAudit.ps1` para funcionar corretamente quando o projeto ainda não possui `.git`.
-- Removido acesso inválido a `$root.Path`; a raiz agora é normalizada como caminho string.
-- Cálculo de caminhos relativos feito com `[System.IO.Path]::GetRelativePath()`.
-- Mantida a distinção explícita entre modo `Git repository` e `working tree`.
+- Fixed `Invoke-RepositoryAudit.ps1` so that it works correctly when the project does not yet have a `.git` directory.
+- Removed invalid access to `$root.Path`; the root is now normalised as a string path.
+- Relative paths are calculated with `[System.IO.Path]::GetRelativePath()`.
+- Kept the explicit distinction between `Git repository` and `working tree` modes.

@@ -1,26 +1,26 @@
 #requires -Version 7.4
 <#!
 .SYNOPSIS
-    CipherVault, sistema de criptografia de mensagens em PowerShell.
+    CipherVault, a message-encryption system for PowerShell.
 
 .DESCRIPTION
-    Aplicacao 100% em console. Nao usa Windows Forms, WPF ou modulos externos.
+    100% console-based. It does not use Windows Forms, WPF or external modules.
 
-    Criptografia:
-      AES-256-GCM para confidencialidade e autenticacao.
-      PBKDF2-HMAC-SHA256 com 600.000 iteracoes para derivar a chave da senha.
-      Salt aleatorio de 16 bytes e nonce aleatorio de 12 bytes por mensagem.
-      Tag GCM de 16 bytes.
+    Cryptography:
+      AES-256-GCM for confidentiality and authentication.
+      PBKDF2-HMAC-SHA256 with 600,000 iterations to derive the password-based key.
+      16-byte random salt and 12-byte random nonce per message.
+      16-byte GCM tag.
 
-    O formato SC4 autentica tambem a versao e os parametros criptograficos por AAD.
-    SC4 e o unico formato suportado.
+    The SC4 format also authenticates the version and cryptographic parameters through AAD.
+    SC4 is the only supported format.
 
-    O alfabeto personalizado altera somente a aparencia do Base64. Nao adiciona
-    seguranca criptografica.
+    The custom alphabet only changes the appearance of Base64. It does not add
+    cryptographic security.
 
 .NOTES
-    Requer PowerShell 7.4+ e .NET com System.Security.Cryptography.AesGcm.
-    Versao do aplicativo: 3.6.0
+    Requires PowerShell 7.4+ and .NET with System.Security.Cryptography.AesGcm.
+    Application version: 3.6.2
 #>
 
 param(
@@ -31,10 +31,10 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 # -----------------------------------------------------------------------------
-# Configuracao
+# Configuration
 # -----------------------------------------------------------------------------
 $script:ProductName = 'CipherVault'
-$script:ProductVersion = '3.6.0'
+$script:ProductVersion = '3.6.2'
 $script:CurrentFormatVersion = 'SC4'
 $script:KdfIterations = 600000
 $script:MinPasswordLength = 12
@@ -49,29 +49,29 @@ $script:KeySize = 32
 
 $script:StandardBase64Alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 
-# 64 caracteres unicos. Nao contem '.' (separador), '=' (padding) nem controles.
+# 64 unique characters. Does not contain '.' (separator), '=' (padding) or controls.
 $script:CustomBase64Alphabet = '!@#$%^&*()-_+[]{}|\;:,<>/?~"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
 
 # -----------------------------------------------------------------------------
-# Validacao do ambiente e do alfabeto
+# Environment and alphabet validation
 # -----------------------------------------------------------------------------
 function Test-CustomAlphabet {
     $chars = $script:CustomBase64Alphabet.ToCharArray()
 
     if ($chars.Length -ne 64) {
-        throw "Erro interno: alfabeto possui $($chars.Length) caracteres; esperado 64."
+        throw "Internal error: alphabet has $($chars.Length) characters; expected 64."
     }
 
     $set = [System.Collections.Generic.HashSet[char]]::new()
     foreach ($char in $chars) {
         if (-not $set.Add($char)) {
-            throw "Erro interno: caractere duplicado no alfabeto: '$char'."
+            throw "Internal error: duplicate character in alphabet: '$char'."
         }
     }
 
     foreach ($forbidden in @('.', '=', "`r", "`n", "`t", ' ')) {
         if ($script:CustomBase64Alphabet.Contains($forbidden)) {
-            throw "Erro interno: caractere '$forbidden' nao pode pertencer ao alfabeto."
+            throw "Internal error: character '$forbidden' cannot be part of the alphabet."
         }
     }
 }
@@ -79,7 +79,7 @@ function Test-CustomAlphabet {
 Test-CustomAlphabet
 
 # -----------------------------------------------------------------------------
-# Perfis de formato
+# Format profiles
 # -----------------------------------------------------------------------------
 function Get-FormatProfile {
     [CmdletBinding()]
@@ -90,11 +90,11 @@ function Get-FormatProfile {
     )
 
     if ($Version -cne 'SC4') {
-        throw "Versao nao suportada: $Version."
+        throw "Unsupported version: $Version."
     }
 
-    # AAD inclui versao + algoritmo + parametros para evitar ambiguidades
-    # e para impedir que futuras versoes aceitem downgrade silencioso.
+    # AAD includes version + algorithm + parameters to prevent ambiguity
+    # and to prevent future versions from silently accepting downgrades.
     return [pscustomobject]@{
         Version       = 'SC4'
         KdfIterations = 600000
@@ -107,7 +107,7 @@ function Get-FormatProfile {
 }
 
 # -----------------------------------------------------------------------------
-# Utilidades criptograficas
+# Cryptographic utilities
 # -----------------------------------------------------------------------------
 function New-RandomBytes {
     [CmdletBinding()]
@@ -140,7 +140,7 @@ function Clear-SensitiveBytes {
         }
     }
     catch {
-        # Limpeza e best-effort em ambiente gerenciado.
+        # Cleanup is best-effort in a managed environment.
     }
 }
 
@@ -153,15 +153,15 @@ function Assert-Password {
     )
 
     if ([string]::IsNullOrWhiteSpace($Password)) {
-        throw 'Informe uma senha.'
+        throw 'Enter a password.'
     }
 
     if ($Password.Length -lt $script:MinPasswordLength) {
-        throw "Use uma senha com pelo menos $($script:MinPasswordLength) caracteres."
+        throw "Use a password with at least $($script:MinPasswordLength) characters."
     }
 
     if ($Password.Length -gt $script:MaxPasswordLength) {
-        throw "A senha excede o limite de $($script:MaxPasswordLength) caracteres."
+        throw "The password exceeds the $($script:MaxPasswordLength)-character limit."
     }
 }
 
@@ -182,7 +182,7 @@ function Get-DerivedKey {
     )
 
     if ($Salt.Length -lt 1) {
-        throw 'Salt vazio.'
+        throw 'Empty salt.'
     }
 
     [byte[]]$passwordBytes = [System.Text.Encoding]::UTF8.GetBytes($Password)
@@ -204,7 +204,7 @@ function Get-DerivedKey {
 }
 
 # -----------------------------------------------------------------------------
-# Base64 personalizado
+# Custom Base64
 # -----------------------------------------------------------------------------
 function Get-MaxBase64CharsForBytes {
     [CmdletBinding()]
@@ -233,10 +233,10 @@ function ConvertTo-CustomBase64 {
             continue
         }
 
-        # IndexOf(char) e exato para A/a, diferente de Hashtable case-insensitive.
+        # IndexOf(char) is exact for A/a, unlike a case-insensitive Hashtable.
         $index = $script:StandardBase64Alphabet.IndexOf([char]$char)
         if ($index -lt 0) {
-            throw "Caractere Base64 inesperado: '$char'."
+            throw "Unexpected Base64 character: '$char'."
         }
 
         [void]$builder.Append($script:CustomBase64Alphabet[$index])
@@ -257,24 +257,24 @@ function ConvertFrom-CustomBase64 {
     )
 
     if ([string]::IsNullOrWhiteSpace($Text)) {
-        throw 'Bloco codificado vazio.'
+        throw 'Empty encoded block.'
     }
 
     $clean = $Text.Trim()
 
     if ($clean.Length -gt $MaxChars) {
-        throw "Bloco codificado excede o limite de $MaxChars caracteres."
+        throw "Encoded block exceeds the $MaxChars-character limit."
     }
 
-    # Valida primeiro o alfabeto. Isso garante que um caractere externo
-    # nunca seja mascarado por um erro secundario de padding/comprimento.
+    # Validate the alphabet first. This ensures that an external character
+    # is never masked by a secondary padding/length error.
     foreach ($char in $clean.ToCharArray()) {
         if ($char -eq '=') {
             continue
         }
 
         if ($script:CustomBase64Alphabet.IndexOf([char]$char) -lt 0) {
-            throw ("Codigo contem um caractere invalido U+{0:X4}." -f [int][char]$char)
+            throw ("Code contains an invalid character U+{0:X4}." -f [int][char]$char)
         }
     }
 
@@ -282,12 +282,12 @@ function ConvertFrom-CustomBase64 {
     if ($firstPadding -ge 0) {
         $padding = $clean.Substring($firstPadding)
         if ($padding.Length -gt 2 -or $padding -notmatch '^={1,2}$') {
-            throw 'Base64 invalido: padding malformado.'
+            throw 'Invalid Base64: malformed padding.'
         }
     }
 
     if (($clean.Length % 4) -ne 0) {
-        throw 'Base64 invalido: comprimento deve ser multiplo de 4.'
+        throw 'Invalid Base64: length must be a multiple of 4.'
     }
 
     $builder = [System.Text.StringBuilder]::new($clean.Length)
@@ -299,10 +299,10 @@ function ConvertFrom-CustomBase64 {
         }
 
         $index = $script:CustomBase64Alphabet.IndexOf([char]$char)
-        # O alfabeto ja foi validado acima. Esta verificacao permanece como
-        # defesa adicional caso a implementacao seja alterada no futuro.
+        # The alphabet has already been validated above. This check remains as
+        # additional defence if the implementation is changed in the future.
         if ($index -lt 0) {
-            throw ("Codigo contem um caractere invalido U+{0:X4}." -f [int][char]$char)
+            throw ("Code contains an invalid character U+{0:X4}." -f [int][char]$char)
         }
 
         [void]$builder.Append($script:StandardBase64Alphabet[$index])
@@ -312,21 +312,21 @@ function ConvertFrom-CustomBase64 {
         [byte[]]$result = [Convert]::FromBase64String($builder.ToString())
     }
     catch {
-        throw 'Um dos blocos do codigo nao e um Base64 valido.'
+        throw 'One of the code blocks is not valid Base64.'
     }
 
-    # Reencoda para rejeitar representacoes Base64 nao canonicas, incluindo
-    # bits de padding nao-zero que alguns decodificadores aceitam.
+    # Re-encode to reject non-canonical Base64 representations, including
+    # non-zero padding bits that some decoders accept.
     $canonical = ConvertTo-CustomBase64 -Bytes $result
     if ($canonical -cne $clean) {
-        throw 'Base64 invalido: representacao nao canonica.'
+        throw 'Invalid Base64: non-canonical representation.'
     }
 
     return $result
 }
 
 # -----------------------------------------------------------------------------
-# Criptografia / descriptografia
+# Encryption / decryption
 # -----------------------------------------------------------------------------
 function Protect-SecretMessage {
     [CmdletBinding()]
@@ -340,16 +340,16 @@ function Protect-SecretMessage {
     )
 
     if ([string]::IsNullOrEmpty($PlainText)) {
-        throw 'Digite uma mensagem para criptografar.'
+        throw 'Enter a message to encrypt.'
     }
 
     Assert-Password -Password $Password
 
-    # Preflight conservador: cada caractere .NET ocupa pelo menos um byte em
-    # UTF-8. Isso impede a conversao de strings gigantes antes do limite real
-    # em bytes ser verificado abaixo. A checagem por bytes continua obrigatoria.
+    # Conservative preflight: each .NET character occupies at least one byte in
+    # UTF-8. This prevents conversion of very large strings before the actual
+    # byte limit is checked below. The byte-level check remains mandatory.
     if ($PlainText.Length -gt $script:MaxPlaintextBytes) {
-        throw "Mensagem excede o limite de $($script:MaxPlaintextBytes) bytes."
+        throw "Message exceeds the limit of $($script:MaxPlaintextBytes) bytes."
     }
 
     $profile = Get-FormatProfile -Version $script:CurrentFormatVersion
@@ -367,7 +367,7 @@ function Protect-SecretMessage {
         [byte[]]$plainBytes = $utf8.GetBytes($PlainText)
 
         if ($plainBytes.Length -gt $script:MaxPlaintextBytes) {
-            throw "Mensagem excede o limite de $($script:MaxPlaintextBytes) bytes."
+            throw "Message exceeds the limit of $($script:MaxPlaintextBytes) bytes."
         }
 
         [byte[]]$salt = New-RandomBytes -Length $profile.SaltSize
@@ -410,34 +410,34 @@ function Unprotect-SecretMessage {
     Assert-Password -Password $Password
 
     if ([string]::IsNullOrWhiteSpace($EncodedText)) {
-        throw 'Codigo vazio.'
+        throw 'Empty code.'
     }
 
     if ($EncodedText.Length -gt $script:MaxEncodedTextChars) {
-        throw "Codigo excede o limite de $($script:MaxEncodedTextChars) caracteres."
+        throw "Code exceeds the limit of $($script:MaxEncodedTextChars) characters."
     }
 
     $normalized = $EncodedText.Trim()
     if ([string]::IsNullOrWhiteSpace($normalized)) {
-        throw 'Codigo vazio.'
+        throw 'Empty code.'
     }
 
-    # O formato textual e canonico: whitespace interno nao e aceito.
-    # Isso evita multiplas representacoes textuais para os mesmos bytes.
+    # The textual format is canonical: internal whitespace is not accepted.
+    # This prevents multiple textual representations of the same bytes.
     foreach ($char in $normalized.ToCharArray()) {
         if ([char]::IsWhiteSpace($char)) {
-            throw 'Codigo contem espaco em branco interno.'
+            throw 'Code contains internal whitespace.'
         }
     }
 
     $parts = $normalized -split '\.'
     if ($parts.Count -ne 5) {
-        throw 'Formato invalido. Esperado: SC4.salt.nonce.tag.ciphertext'
+        throw 'Invalid format. Expected: SC4.salt.nonce.tag.ciphertext'
     }
 
     $version = $parts[0]
     if ($version -cne 'SC4') {
-        throw "Versao nao suportada: formato diferente de SC4."
+        throw "Unsupported version: format other than SC4."
     }
 
     $profile = Get-FormatProfile -Version 'SC4'
@@ -447,11 +447,11 @@ function Unprotect-SecretMessage {
     $expectedTagChars = Get-MaxBase64CharsForBytes -Bytes $profile.TagSize
     $maxCipherChars = Get-MaxBase64CharsForBytes -Bytes $script:MaxCiphertextBytes
 
-    if ($parts[1].Length -ne $expectedSaltChars) { throw 'Salt com comprimento invalido.' }
-    if ($parts[2].Length -ne $expectedNonceChars) { throw 'Nonce com comprimento invalido.' }
-    if ($parts[3].Length -ne $expectedTagChars) { throw 'Tag com comprimento invalido.' }
-    if ($parts[4].Length -gt $maxCipherChars) { throw 'Ciphertext excede o limite permitido.' }
-    if ($parts[4].Length -eq 0) { throw 'Ciphertext vazio.' }
+    if ($parts[1].Length -ne $expectedSaltChars) { throw 'Invalid salt length.' }
+    if ($parts[2].Length -ne $expectedNonceChars) { throw 'Invalid nonce length.' }
+    if ($parts[3].Length -ne $expectedTagChars) { throw 'Invalid tag length.' }
+    if ($parts[4].Length -gt $maxCipherChars) { throw 'Ciphertext exceeds the permitted limit.' }
+    if ($parts[4].Length -eq 0) { throw 'Empty ciphertext.' }
 
     [byte[]]$salt = $null
     [byte[]]$nonce = $null
@@ -467,10 +467,10 @@ function Unprotect-SecretMessage {
         [byte[]]$tag = ConvertFrom-CustomBase64 -Text $parts[3] -MaxChars $expectedTagChars
         [byte[]]$cipherBytes = ConvertFrom-CustomBase64 -Text $parts[4] -MaxChars $maxCipherChars
 
-        if ($salt.Length -ne $profile.SaltSize) { throw 'Salt invalido.' }
-        if ($nonce.Length -ne $profile.NonceSize) { throw 'Nonce invalido.' }
-        if ($tag.Length -ne $profile.TagSize) { throw 'Tag invalida.' }
-        if ($cipherBytes.Length -gt $script:MaxCiphertextBytes) { throw 'Ciphertext excede o limite permitido.' }
+        if ($salt.Length -ne $profile.SaltSize) { throw 'Invalid salt.' }
+        if ($nonce.Length -ne $profile.NonceSize) { throw 'Invalid nonce.' }
+        if ($tag.Length -ne $profile.TagSize) { throw 'Invalid tag.' }
+        if ($cipherBytes.Length -gt $script:MaxCiphertextBytes) { throw 'Ciphertext exceeds the permitted limit.' }
 
         [byte[]]$key = Get-DerivedKey -Password $Password -Salt $salt -Iterations $profile.KdfIterations -KeySize $profile.KeySize
         [byte[]]$plainBytes = [byte[]]::new($cipherBytes.Length)
@@ -481,7 +481,7 @@ function Unprotect-SecretMessage {
             $aes.Decrypt($nonce, $cipherBytes, $tag, $plainBytes, $profile.Aad)
         }
         catch [System.Security.Cryptography.CryptographicException] {
-            throw 'Falha de autenticacao: senha incorreta ou codigo alterado/corrompido.'
+            throw 'Authentication failed: incorrect password or altered/corrupted code.'
         }
 
         $utf8 = [System.Text.UTF8Encoding]::new($false, $true)
@@ -489,7 +489,7 @@ function Unprotect-SecretMessage {
             return $utf8.GetString($plainBytes)
         }
         catch [System.Text.DecoderFallbackException] {
-            throw 'Mensagem autenticada, mas o conteudo nao e UTF-8 valido.'
+            throw 'Message authenticated, but the content is not valid UTF-8.'
         }
     }
     finally {
@@ -504,7 +504,7 @@ function Unprotect-SecretMessage {
 }
 
 # -----------------------------------------------------------------------------
-# Autotestes criptograficos
+# Cryptographic self-tests
 # -----------------------------------------------------------------------------
 function New-TamperedCipherText {
     [CmdletBinding()]
@@ -540,14 +540,14 @@ function Assert-DecryptionFails {
 
     try {
         [void](Unprotect-SecretMessage -EncodedText $EncodedText -Password $Password)
-        throw 'Falha no autoteste: uma alteracao deveria ter sido rejeitada.'
+        throw 'Self-test failure: a modification should have been rejected.'
     }
     catch {
-        if ($_.Exception.Message -eq 'Falha no autoteste: uma alteracao deveria ter sido rejeitada.') {
+        if ($_.Exception.Message -eq 'Self-test failure: a modification should have been rejected.') {
             throw
         }
-        if ($_.Exception.Message -notmatch 'Falha de autenticacao') {
-            throw "Falha no autoteste de rejeicao: $($_.Exception.Message)"
+        if ($_.Exception.Message -notmatch 'Authentication failed') {
+            throw "Rejection self-test failure: $($_.Exception.Message)"
         }
     }
 }
@@ -555,48 +555,48 @@ function Assert-DecryptionFails {
 function Test-CipherVault {
     $script:SelfTestError = $null
     $testPassword = 'CipherVault-SelfTest#2026!A7'
-    $testText = "Teste 123 - acentos: áéíóú âêîôû ãõ ç`r`nLinha 2`nSimbolos: ! @ # $ % & * + ?"
+    $testText = "Test 123 - accents: áéíóú âêîôû ãõ ç`r`nLine 2`nSymbols: ! @ # $ % & * + ?"
 
     try {
-        # Mapeamento Base64, incluindo tamanhos que cruzam limites de padding.
+        # Base64 mapping, including sizes that cross padding boundaries.
         foreach ($size in @(1, 2, 3, 4, 15, 16, 17, 31, 32, 33, 127, 256)) {
             [byte[]]$raw = New-RandomBytes -Length $size
             $mapped = ConvertTo-CustomBase64 -Bytes $raw
             [byte[]]$back = ConvertFrom-CustomBase64 -Text $mapped -MaxChars (Get-MaxBase64CharsForBytes -Bytes $size)
 
             if ($raw.Length -ne $back.Length) {
-                throw "Falha no autoteste Base64 no tamanho $size."
+                throw "Base64 self-test failure at size $size."
             }
 
             for ($i = 0; $i -lt $raw.Length; $i++) {
                 if ($raw[$i] -ne $back[$i]) {
-                    throw "Falha no autoteste Base64 no tamanho $size."
+                    throw "Base64 self-test failure at size $size."
                 }
             }
         }
 
-        # Round-trip completo.
+        # Full round-trip.
         $encoded1 = Protect-SecretMessage -PlainText $testText -Password $testPassword
         $decoded1 = Unprotect-SecretMessage -EncodedText $encoded1 -Password $testPassword
         if ($decoded1 -ne $testText) {
-            throw 'Round-trip criptografico retornou mensagem diferente.'
+            throw 'Cryptographic round-trip returned a different message.'
         }
 
-        # Mesmo texto + mesma senha deve gerar saidas diferentes.
+        # The same text + same password should generate different outputs.
         $encoded2 = Protect-SecretMessage -PlainText $testText -Password $testPassword
         if ($encoded1 -eq $encoded2) {
-            throw 'Salt/nonce nao parecem estar variando entre criptografias.'
+            throw 'Salt/nonce do not appear to vary between encryptions.'
         }
 
-        # Senha errada.
-        Assert-DecryptionFails -EncodedText $encoded1 -Password 'Senha-Errada#2026!XYZ'
+        # Incorrect password.
+        Assert-DecryptionFails -EncodedText $encoded1 -Password 'Wrong-Password#2026!XYZ'
 
-        # Tamper do salt, tag e ciphertext.
+        # Tamper with salt, tag and ciphertext.
         Assert-DecryptionFails -EncodedText (New-TamperedCipherText -EncodedText $encoded1 -Component 1) -Password $testPassword
         Assert-DecryptionFails -EncodedText (New-TamperedCipherText -EncodedText $encoded1 -Component 3) -Password $testPassword
         Assert-DecryptionFails -EncodedText (New-TamperedCipherText -EncodedText $encoded1 -Component 4) -Password $testPassword
 
-        # SC4 e o unico formato suportado; versoes desconhecidas devem ser rejeitadas.
+        # SC4 is the only supported format; unknown versions must be rejected.
         $parts = $encoded1 -split '\.'
         $parts[0] = 'SC9'
         $unsupportedRejected = $false
@@ -604,7 +604,7 @@ function Test-CipherVault {
             [void](Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $testPassword)
         }
         catch {
-            if ($_.Exception.Message -eq 'Versao nao suportada: formato diferente de SC4.') {
+            if ($_.Exception.Message -eq 'Unsupported version: format other than SC4.') {
                 $unsupportedRejected = $true
             }
             else {
@@ -613,7 +613,7 @@ function Test-CipherVault {
         }
 
         if (-not $unsupportedRejected) {
-            throw 'Falha no autoteste: uma versao nao suportada deveria ser rejeitada.'
+            throw 'Self-test failure: an unsupported version should have been rejected.'
         }
 
         return $true
@@ -628,9 +628,9 @@ function Test-CipherVault {
 # Console
 # -----------------------------------------------------------------------------
 function Read-PasswordHidden {
-    param([string]$Prompt = 'Senha')
+    param([string]$Prompt = 'Password')
 
-    Write-Host "$Prompt (mínimo $($script:MinPasswordLength) caracteres): " -NoNewline -ForegroundColor Gray
+    Write-Host "$Prompt (minimum $($script:MinPasswordLength) characters): " -NoNewline -ForegroundColor Gray
     [char[]]$buffer = [char[]]::new($script:MaxPasswordLength)
     [int]$count = 0
 
@@ -705,8 +705,8 @@ function ConvertTo-SafeConsoleText {
         [string]$Text
     )
 
-    # Alem de C0/C1, escapea controles de formato bidirecional e caracteres
-    # invisiveis que podem ser usados para spoofing visual em terminais/logs.
+    # In addition to C0/C1, escape bidirectional formatting controls and
+    # invisible characters that can be used for visual spoofing in terminals/logs.
     $unsafeUnicode = @(
         0x061C,       # Arabic Letter Mark
         0x180E,       # Mongolian Vowel Separator
@@ -746,21 +746,21 @@ function ConvertTo-SafeConsoleText {
 }
 
 function Read-SingleLineMessage {
-    Write-Host 'Mensagem:' -ForegroundColor Gray
-    Write-Host 'Digite uma linha e pressione Enter.' -ForegroundColor DarkGray
+    Write-Host 'Message:' -ForegroundColor Gray
+    Write-Host 'Type one line and press Enter.' -ForegroundColor DarkGray
     Write-Host
     return (Read-Host '>')
 }
 
 function Read-MultilineFromClipboard {
-    Write-Host 'Copie primeiro o texto que deseja criptografar.' -ForegroundColor Gray
-    Write-Host 'Depois pressione Enter para ler a area de transferencia.' -ForegroundColor DarkGray
+    Write-Host 'First copy the text you want to encrypt.' -ForegroundColor Gray
+    Write-Host 'Then press Enter to read the clipboard.' -ForegroundColor DarkGray
     Write-Host
-    [void](Read-Host 'Pressione Enter para continuar')
+    [void](Read-Host 'Press Enter to continue')
 
     $text = Get-ClipboardTextSafe
     if ($null -eq $text) {
-        throw 'Nao foi possivel obter texto da area de transferencia.'
+        throw 'Unable to retrieve text from the clipboard.'
     }
 
     return $text
@@ -777,7 +777,7 @@ function Format-BannerLine {
     )
 
     if ($Text.Length -gt $Width) {
-        throw "Texto do banner excede a largura interna de $Width caracteres."
+        throw "Banner text exceeds the internal width of $Width characters."
     }
 
     $padding = $Width - $Text.Length
@@ -809,7 +809,7 @@ function Show-Banner {
     Write-Host ("  $(Format-BannerLine -Text 'CIPHERVAULT' -Width $width)") -ForegroundColor DarkGray
     Write-Host ("  $(Format-BannerLine -Text 'AES-256-GCM + PBKDF2-HMAC-SHA256' -Width $width)") -ForegroundColor DarkGray
     Write-Host ("  $bottom") -ForegroundColor DarkGray
-    Write-Host "  Versão $($script:ProductVersion) | PowerShell $($PSVersionTable.PSVersion)" -ForegroundColor DarkGray
+    Write-Host "  Version $($script:ProductVersion) | PowerShell $($PSVersionTable.PSVersion)" -ForegroundColor DarkGray
     Write-Host
 }
 
@@ -820,7 +820,7 @@ function Invoke-EncodeFlow {
     )
 
     Show-Banner
-    Write-Host '  CRIPTOGRAFAR MENSAGEM' -ForegroundColor Cyan
+    Write-Host '  ENCRYPT MESSAGE' -ForegroundColor Cyan
     Write-Rule
     Write-Host
 
@@ -835,31 +835,31 @@ function Invoke-EncodeFlow {
         }
 
         if ([string]::IsNullOrEmpty($plainText)) {
-            throw 'A mensagem nao pode estar vazia.'
+            throw 'The message cannot be empty.'
         }
 
         $result = Protect-SecretMessage -PlainText $plainText -Password $password
 
         Show-Banner
-        Write-Host '  CRIPTOGRAFAR MENSAGEM' -ForegroundColor Cyan
+        Write-Host '  ENCRYPT MESSAGE' -ForegroundColor Cyan
         Write-Rule
         Write-Host
-        Write-Host '  RESULTADO:' -ForegroundColor Green
+        Write-Host '  RESULT:' -ForegroundColor Green
         Write-Host
         Write-Host $result -ForegroundColor White
         Write-Host
         Write-Rule
 
         if (Copy-ToClipboardSafe -Text $result) {
-            Write-Host '  Codigo copiado para a area de transferencia.' -ForegroundColor Green
+            Write-Host '  Code copied to the clipboard.' -ForegroundColor Green
         }
         else {
-            Write-Host '  Copia automatica nao disponivel.' -ForegroundColor Yellow
+            Write-Host '  Automatic copy is not available.' -ForegroundColor Yellow
         }
     }
     catch {
         Write-Host
-        Write-Host ("  ERRO: " + (ConvertTo-SafeConsoleText -Text $_.Exception.Message)) -ForegroundColor Red
+        Write-Host ("  ERROR: " + (ConvertTo-SafeConsoleText -Text $_.Exception.Message)) -ForegroundColor Red
     }
     finally {
         $password = $null
@@ -868,12 +868,12 @@ function Invoke-EncodeFlow {
     }
 
     Write-Host
-    [void](Read-Host 'Pressione Enter para voltar ao menu')
+    [void](Read-Host 'Press Enter to return to the menu')
 }
 
 function Invoke-DecodeFlow {
     Show-Banner
-    Write-Host '  DESCRIPTOGRAFAR MENSAGEM' -ForegroundColor Cyan
+    Write-Host '  DECRYPT MESSAGE' -ForegroundColor Cyan
     Write-Rule
     Write-Host
 
@@ -881,35 +881,35 @@ function Invoke-DecodeFlow {
 
     try {
         Write-Host
-        Write-Host 'Cole o codigo completo e pressione Enter.' -ForegroundColor Gray
-        Write-Host 'Se deixar vazio, o CipherVault tenta ler a area de transferencia.' -ForegroundColor DarkGray
+        Write-Host 'Paste the complete code and press Enter.' -ForegroundColor Gray
+        Write-Host 'If left empty, CipherVault tries to read the clipboard.' -ForegroundColor DarkGray
         Write-Host
 
-        $encodedText = Read-Host 'Codigo'
+        $encodedText = Read-Host 'Code'
         if ([string]::IsNullOrWhiteSpace($encodedText)) {
             $encodedText = Get-ClipboardTextSafe
         }
 
         if ([string]::IsNullOrWhiteSpace($encodedText)) {
-            throw 'Nenhum codigo foi informado.'
+            throw 'No code was provided.'
         }
 
         $result = Unprotect-SecretMessage -EncodedText $encodedText -Password $password
 
         Show-Banner
-        Write-Host '  DESCRIPTOGRAFAR MENSAGEM' -ForegroundColor Cyan
+        Write-Host '  DECRYPT MESSAGE' -ForegroundColor Cyan
         Write-Rule
         Write-Host
-        Write-Host '  MENSAGEM RECUPERADA:' -ForegroundColor Green
+        Write-Host '  RECOVERED MESSAGE:' -ForegroundColor Green
         Write-Host
         Write-Host (ConvertTo-SafeConsoleText -Text $result) -ForegroundColor White
         Write-Host
         Write-Rule
-        Write-Host '  Controles de terminal foram escapados para evitar injecao ANSI/VT.' -ForegroundColor DarkGray
+        Write-Host '  Terminal controls were escaped to prevent ANSI/VT injection.' -ForegroundColor DarkGray
     }
     catch {
         Write-Host
-        Write-Host ("  ERRO: " + (ConvertTo-SafeConsoleText -Text $_.Exception.Message)) -ForegroundColor Red
+        Write-Host ("  ERROR: " + (ConvertTo-SafeConsoleText -Text $_.Exception.Message)) -ForegroundColor Red
     }
     finally {
         $password = $null
@@ -918,31 +918,31 @@ function Invoke-DecodeFlow {
     }
 
     Write-Host
-    [void](Read-Host 'Pressione Enter para voltar ao menu')
+    [void](Read-Host 'Press Enter to return to the menu')
 }
 
 function Show-About {
     Show-Banner
-    Write-Host '  SOBRE / SEGURANCA' -ForegroundColor Cyan
+    Write-Host '  ABOUT / SECURITY' -ForegroundColor Cyan
     Write-Rule
     Write-Host
-    Write-Host '  CipherVault e um sistema de criptografia de mensagens em console.'
-    Write-Host '  Protecao: AES-256-GCM.'
-    Write-Host '  Derivacao: PBKDF2-HMAC-SHA256.'
-    Write-Host "  Iteracoes PBKDF2: $($script:KdfIterations)."
-    Write-Host '  Salt: 16 bytes | Nonce: 12 bytes | Tag: 16 bytes | Chave: 32 bytes.'
-    Write-Host '  Formato: SC4, com algoritmo e parametros vinculados por AAD.'
-    Write-Host '  Formatos diferentes de SC4 sao rejeitados.'
-    Write-Host "  Limite de mensagem: $($script:MaxPlaintextBytes) bytes."
-    Write-Host "  Limite de senha: $($script:MaxPasswordLength) caracteres."
+    Write-Host '  CipherVault is a console-based message-encryption system.'
+    Write-Host '  Protection: AES-256-GCM.'
+    Write-Host '  Key derivation: PBKDF2-HMAC-SHA256.'
+    Write-Host "  PBKDF2 iterations: $($script:KdfIterations)."
+    Write-Host '  Salt: 16 bytes | Nonce: 12 bytes | Tag: 16 bytes | Key: 32 bytes.'
+    Write-Host '  Format: SC4, with the algorithm and parameters bound by AAD.'
+    Write-Host '  Formats other than SC4 are rejected.'
+    Write-Host "  Message limit: $($script:MaxPlaintextBytes) bytes."
+    Write-Host "  Password limit: $($script:MaxPasswordLength) characters."
     Write-Host
-    Write-Host '  O alfabeto personalizado apenas remapeia o Base64.' -ForegroundColor DarkGray
-    Write-Host '  Ele nao aumenta a seguranca criptografica.' -ForegroundColor DarkGray
+    Write-Host '  The custom alphabet only remaps Base64.' -ForegroundColor DarkGray
+    Write-Host '  It does not increase cryptographic security.' -ForegroundColor DarkGray
     Write-Host
-    Write-Host '  O resultado e copiado para a area de transferencia quando possivel.' -ForegroundColor DarkGray
-    Write-Host '  Mantenha a senha fora do codigo criptografado.' -ForegroundColor Yellow
+    Write-Host '  The result is copied to the clipboard when possible.' -ForegroundColor DarkGray
+    Write-Host '  Keep the password separate from the encrypted code.' -ForegroundColor Yellow
     Write-Host
-    [void](Read-Host 'Pressione Enter para voltar ao menu')
+    [void](Read-Host 'Press Enter to return to the menu')
 }
 
 function Start-CipherVault {
@@ -950,47 +950,47 @@ function Start-CipherVault {
         $minimumVersion = [version]'7.4'
         if ([version]$PSVersionTable.PSVersion -lt $minimumVersion) {
             Show-Banner
-            Write-Host '  VERSAO DO POWERSHELL NAO SUPORTADA.' -ForegroundColor Red
-            Write-Host '  O CipherVault requer PowerShell 7.4 ou superior.' -ForegroundColor Yellow
+            Write-Host '  UNSUPPORTED POWERSHELL VERSION.' -ForegroundColor Red
+            Write-Host '  CipherVault requires PowerShell 7.4 or later.' -ForegroundColor Yellow
             Write-Host
-            [void](Read-Host 'Pressione Enter para sair')
+            [void](Read-Host 'Press Enter to exit')
             return
         }
 
         if (-not [System.Security.Cryptography.AesGcm]::IsSupported) {
             Show-Banner
-            Write-Host '  AES-GCM NAO ESTA DISPONIVEL NESTE AMBIENTE.' -ForegroundColor Red
-            Write-Host '  Verifique o PowerShell 7 e o suporte criptografico do .NET.' -ForegroundColor Yellow
+            Write-Host '  AES-GCM IS NOT AVAILABLE IN THIS ENVIRONMENT.' -ForegroundColor Red
+            Write-Host '  Check PowerShell 7 and .NET cryptographic support.' -ForegroundColor Yellow
             Write-Host
-            [void](Read-Host 'Pressione Enter para sair')
+            [void](Read-Host 'Press Enter to exit')
             return
         }
 
         $selfTest = Test-CipherVault
         if (-not $selfTest) {
             Show-Banner
-            Write-Host '  ERRO DE INICIALIZACAO' -ForegroundColor Red
-            Write-Host '  O autoteste criptografico falhou.' -ForegroundColor Red
+            Write-Host '  INITIALISATION ERROR' -ForegroundColor Red
+            Write-Host '  The cryptographic self-test failed.' -ForegroundColor Red
             if ($script:SelfTestError) {
-                Write-Host "  Detalhe: $($script:SelfTestError)" -ForegroundColor DarkYellow
+                Write-Host "  Detail: $($script:SelfTestError)" -ForegroundColor DarkYellow
             }
             Write-Host
-            Write-Host '  O programa foi interrompido para evitar uso nao validado.' -ForegroundColor Yellow
+            Write-Host '  The program was stopped to avoid using an unvalidated mechanism.' -ForegroundColor Yellow
             Write-Host
-            [void](Read-Host 'Pressione Enter para sair')
+            [void](Read-Host 'Press Enter to exit')
             return
         }
 
         while ($true) {
             Show-Banner
-            Write-Host '  [1] Criptografar mensagem' -ForegroundColor White
-            Write-Host '  [2] Criptografar texto da area de transferencia' -ForegroundColor White
-            Write-Host '  [3] Descriptografar mensagem' -ForegroundColor White
-            Write-Host '  [4] Sobre / parametros' -ForegroundColor White
-            Write-Host '  [0] Sair' -ForegroundColor White
+            Write-Host '  [1] Encrypt message' -ForegroundColor White
+            Write-Host '  [2] Encrypt clipboard text' -ForegroundColor White
+            Write-Host '  [3] Decrypt message' -ForegroundColor White
+            Write-Host '  [4] About / parameters' -ForegroundColor White
+            Write-Host '  [0] Exit' -ForegroundColor White
             Write-Host
 
-            $choice = Read-Host '  Escolha uma opcao'
+            $choice = Read-Host '  Choose an option'
             Write-Host
 
             switch ($choice) {
@@ -1000,12 +1000,12 @@ function Start-CipherVault {
                 '4' { Show-About }
                 '0' {
                     Show-Banner
-                    Write-Host '  Encerrando CipherVault...' -ForegroundColor DarkGray
+                    Write-Host '  Exiting CipherVault...' -ForegroundColor DarkGray
                     return
                 }
                 default {
-                    Write-Host '  Opcao invalida.' -ForegroundColor Red
-                    [void](Read-Host 'Pressione Enter')
+                    Write-Host '  Invalid option.' -ForegroundColor Red
+                    [void](Read-Host 'Press Enter')
                 }
             }
         }
@@ -1013,13 +1013,13 @@ function Start-CipherVault {
     catch {
         try { [Console]::CursorVisible = $true } catch { }
         Write-Host
-        Write-Host ("ERRO FATAL: " + (ConvertTo-SafeConsoleText -Text $_.Exception.Message)) -ForegroundColor Red
+        Write-Host ("FATAL ERROR: " + (ConvertTo-SafeConsoleText -Text $_.Exception.Message)) -ForegroundColor Red
         Write-Host
-        [void](Read-Host 'Pressione Enter para sair')
+        [void](Read-Host 'Press Enter to exit')
     }
 }
 
-# UTF-8 evita problemas de caracteres na moldura em hosts compativeis.
+# UTF-8 avoids character issues in the border on compatible hosts.
 try {
     [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 }

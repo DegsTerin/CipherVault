@@ -4,7 +4,7 @@ BeforeAll {
 }
 
 Describe 'CipherVault | Offensive security' {
-    It 'rejeita entrada aleatoria malformada sem excecao nao tratada' {
+    It 'rejects malformed random input without an unhandled exception' {
         $password = 'OffensiveTest#2026!x'
         $random = [System.Random]::new(1337)
 
@@ -28,70 +28,70 @@ Describe 'CipherVault | Offensive security' {
         }
     }
 
-    It 'rejeita entrada somente com whitespace' {
-        { Unprotect-SecretMessage -EncodedText " `t`r`n " -Password 'OffensiveTest#2026!x' } | Should -Throw '*Codigo vazio*'
+    It 'rejects whitespace-only input' {
+        { Unprotect-SecretMessage -EncodedText " `t`r`n " -Password 'OffensiveTest#2026!x' } | Should -Throw '*Empty code*'
     }
 
-    It 'rejeita caracteres fora do alfabeto personalizado' {
+    It 'rejects characters outside the custom alphabet' {
         $password = 'OffensiveTest#2026!x'
-        $encoded = Protect-SecretMessage -PlainText 'teste' -Password $password
+        $encoded = Protect-SecretMessage -PlainText 'test' -Password $password
         $parts = $encoded -split '\.', 5
         $parts[1] = ($parts[1].Substring(0, $parts[1].Length - 1) + '`')
-        { Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password } | Should -Throw '*caractere invalido U+0060*'
+        { Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password } | Should -Throw '*invalid character U+0060*'
     }
 
-    It 'mantem limite de plaintext sem derivar chave' {
+    It 'enforces the plaintext limit without deriving the key' {
         $password = 'OffensiveTest#2026!x'
         $oversized = 'A' * ([int]$script:MaxPlaintextBytes + 1)
-        { Protect-SecretMessage -PlainText $oversized -Password $password } | Should -Throw '*Mensagem excede o limite*'
+        { Protect-SecretMessage -PlainText $oversized -Password $password } | Should -Throw '*Message exceeds the limit*'
     }
 
-    It 'rejeita tag de tamanho incorreto antes do KDF' {
+    It 'rejects an incorrect tag length before the KDF' {
         $password = 'OffensiveTest#2026!x'
-        $encoded = Protect-SecretMessage -PlainText 'teste' -Password $password
+        $encoded = Protect-SecretMessage -PlainText 'test' -Password $password
         $parts = $encoded -split '\.', 5
         $parts[3] = $parts[3].Substring(0, $parts[3].Length - 4)
-        { Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password } | Should -Throw '*Tag com comprimento invalido*'
+        { Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password } | Should -Throw '*Invalid tag length*'
     }
 
-    It 'rejeita nonce de tamanho incorreto antes do KDF' {
+    It 'rejects an incorrect nonce length before the KDF' {
         $password = 'OffensiveTest#2026!x'
-        $encoded = Protect-SecretMessage -PlainText 'teste' -Password $password
+        $encoded = Protect-SecretMessage -PlainText 'test' -Password $password
         $parts = $encoded -split '\.', 5
         $parts[2] = $parts[2] + '!'
-        { Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password } | Should -Throw '*Nonce com comprimento invalido*'
+        { Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password } | Should -Throw '*Invalid nonce length*'
     }
 
-    It 'rejeita salt de tamanho incorreto antes do KDF' {
+    It 'rejects an incorrect salt length before the KDF' {
         $password = 'OffensiveTest#2026!x'
-        $encoded = Protect-SecretMessage -PlainText 'teste' -Password $password
+        $encoded = Protect-SecretMessage -PlainText 'test' -Password $password
         $parts = $encoded -split '\.', 5
         $parts[1] = $parts[1] + '!'
-        { Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password } | Should -Throw '*Salt com comprimento invalido*'
+        { Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password } | Should -Throw '*Invalid salt length*'
     }
 
-    It 'rejeita campo extra no ciphertext' {
+    It 'rejects an extra ciphertext field' {
         $password = 'OffensiveTest#2026!x'
-        $encoded = Protect-SecretMessage -PlainText 'teste' -Password $password
+        $encoded = Protect-SecretMessage -PlainText 'test' -Password $password
         $tampered = $encoded + '.extra'
-        { Unprotect-SecretMessage -EncodedText $tampered -Password $password } | Should -Throw '*formato invalido*'
+        { Unprotect-SecretMessage -EncodedText $tampered -Password $password } | Should -Throw '*invalid format*'
     }
 
-    It 'prioriza caractere invalido sobre erro secundario de padding' {
+    It 'prioritises an invalid character over a secondary padding error' {
         $password = 'OffensiveTest#2026!x'
-        $encoded = Protect-SecretMessage -PlainText 'teste' -Password $password
+        $encoded = Protect-SecretMessage -PlainText 'test' -Password $password
         $parts = $encoded -split '\.'
         $parts[1] = ($parts[1].Substring(0, 22) + '`=')
-        { Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password } | Should -Throw '*caractere invalido U+0060*'
+        { Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password } | Should -Throw '*invalid character U+0060*'
     }
 
-    It 'rejeita mais de cinco componentes estruturais' {
+    It 'rejects more than five structural components' {
         $password = 'OffensiveTest#2026!x'
-        $encoded = Protect-SecretMessage -PlainText 'teste' -Password $password
-        { Unprotect-SecretMessage -EncodedText ($encoded + '.extra') -Password $password } | Should -Throw '*Formato invalido*'
+        $encoded = Protect-SecretMessage -PlainText 'test' -Password $password
+        { Unprotect-SecretMessage -EncodedText ($encoded + '.extra') -Password $password } | Should -Throw '*Invalid format*'
     }
 
-    It 'preserva controles no plaintext, mas os escapa na exibicao' {
+    It 'preserves controls in plaintext but escapes them for display' {
         $password = 'OffensiveTest#2026!x'
         $text = "Linha`n`rTab`t" + ([char]27) + 'CTRL' + ([char]0x202E) + 'BIDI'
         $encoded = Protect-SecretMessage -PlainText $text -Password $password
@@ -104,29 +104,29 @@ Describe 'CipherVault | Offensive security' {
         $safe | Should -Match '\\u202E'
     }
 
-    It 'nao reflete ESC bruto na mensagem de erro de versao' {
+    It 'does not reflect raw ESC in the version error message' {
         $password = 'OffensiveTest#2026!x'
-        $encoded = Protect-SecretMessage -PlainText 'teste' -Password $password
+        $encoded = Protect-SecretMessage -PlainText 'test' -Password $password
         $parts = $encoded -split '\.', 5
         $parts[0] = 'SC9' + ([char]27) + '[2J'
         try {
             [void](Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password)
-            throw 'Teste deveria falhar.'
+            throw 'Test should have failed.'
         }
         catch {
             $_.Exception.Message | Should -Not -Match ([char]27)
-            $_.Exception.Message | Should -Match 'formato diferente de SC4'
+            $_.Exception.Message | Should -Match 'format other than SC4'
         }
     }
-    It 'rejeita whitespace interno no codigo' {
+    It 'rejects internal whitespace in the code' {
         $password = 'OffensiveTest#2026!x'
-        $encoded = Protect-SecretMessage -PlainText 'teste' -Password $password
+        $encoded = Protect-SecretMessage -PlainText 'test' -Password $password
         $parts = $encoded -split '\.', 5
         $parts[4] = $parts[4].Insert(2, ' ')
-        { Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password } | Should -Throw '*espaco em branco interno*'
+        { Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password } | Should -Throw '*internal whitespace*'
     }
 
-    It 'rejeita Base64 nao canonico' {
+    It 'rejects non-canonical Base64' {
         [byte[]]$raw = 0x41
         $canonical = ConvertTo-CustomBase64 -Bytes $raw
         $standard = 'QR=='
@@ -138,16 +138,16 @@ Describe 'CipherVault | Offensive security' {
         }
         $nonCanonical = $builder.ToString()
         $nonCanonical | Should -Not -Be $canonical
-        { ConvertFrom-CustomBase64 -Text $nonCanonical -MaxChars 4 } | Should -Throw '*representacao nao canonica*'
+        { ConvertFrom-CustomBase64 -Text $nonCanonical -MaxChars 4 } | Should -Throw '*non-canonical representation*'
     }
 
-    It 'rejeita codigo acima do limite antes da descriptografia' {
+    It 'rejects code above the limit before decryption' {
         $password = 'OffensiveTest#2026!x'
         $oversized = [string]::new('A', [int]$script:MaxEncodedTextChars + 1)
-        { Unprotect-SecretMessage -EncodedText $oversized -Password $password } | Should -Throw '*Codigo excede o limite*'
+        { Unprotect-SecretMessage -EncodedText $oversized -Password $password } | Should -Throw '*Code exceeds the limit*'
     }
 
-    It 'autentica a AAD e rejeita AAD diferente' {
+    It 'authenticates AAD and rejects different AAD' {
         $password = 'OffensiveTest#2026!x'
         $plaintext = 'AAD test'
         $encoded = Protect-SecretMessage -PlainText $plaintext -Password $password
@@ -174,7 +174,7 @@ Describe 'CipherVault | Offensive security' {
             $parts[3] = ConvertTo-CustomBase64 -Bytes $wrongTag
             $parts[4] = ConvertTo-CustomBase64 -Bytes $wrongCipher
 
-            { Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password } | Should -Throw '*Falha de autenticacao*'
+            { Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password } | Should -Throw '*Authentication failed*'
         }
         finally {
             if ($null -ne $aes) { $aes.Dispose() }
@@ -187,7 +187,7 @@ Describe 'CipherVault | Offensive security' {
         }
     }
 
-    It 'gera pares salt nonce distintos em varias criptografias' {
+    It 'generates distinct salt/nonce pairs across several encryptions' {
         $password = 'OffensiveTest#2026!x'
         $pairs = [System.Collections.Generic.HashSet[string]]::new()
         for ($i = 0; $i -lt 8; $i++) {
@@ -198,13 +198,13 @@ Describe 'CipherVault | Offensive security' {
         $pairs.Count | Should -Be 8
     }
 
-    It 'escapa separadores Unicode de linha na exibicao' {
+    It 'escapes Unicode line separators for display' {
         $safe = ConvertTo-SafeConsoleText -Text ("A" + [char]0x2028 + "B" + [char]0x2029 + "C")
         $safe | Should -Be 'A\u2028B\u2029C'
     }
 
 
-    It 'valida PBKDF2-HMAC-SHA256 contra vetor RFC 7914' {
+    It 'validates PBKDF2-HMAC-SHA256 against the RFC 7914 test vector' {
         [byte[]]$salt = [System.Text.Encoding]::ASCII.GetBytes('salt')
         [byte[]]$derived = Get-DerivedKey -Password 'passwd' -Salt $salt -Iterations 1 -KeySize 64
 
@@ -213,7 +213,7 @@ Describe 'CipherVault | Offensive security' {
         $actualHex | Should -Be $expectedHex
     }
 
-    It 'valida AES-256-GCM contra vetor NIST com plaintext vazio' {
+    It 'validates AES-256-GCM against the NIST vector with empty plaintext' {
         [byte[]]$key = [byte[]]::new(32)
         [byte[]]$nonce = [byte[]]::new(12)
         [byte[]]$cipher = [byte[]]::new(0)
@@ -233,7 +233,7 @@ Describe 'CipherVault | Offensive security' {
         }
     }
 
-    It 'valida AES-256-GCM contra vetor NIST com 16 bytes de plaintext' {
+    It 'validates AES-256-GCM against the NIST vector with 16 bytes of plaintext' {
         [byte[]]$key = [byte[]]::new(32)
         [byte[]]$nonce = [byte[]]::new(12)
         [byte[]]$plain = [byte[]]::new(16)
@@ -263,7 +263,7 @@ Describe 'CipherVault | Offensive security' {
         }
     }
 
-    It 'executa round-trip em mensagens Unicode aleatorias' {
+    It 'performs round-trips on random Unicode messages' {
         $password = 'UnicodeRandom#2026!x'
         $random = [System.Random]::new(73421)
 
@@ -291,15 +291,15 @@ Describe 'CipherVault | Offensive security' {
     }
 
 
-    It 'rejeita versao SC4 com caixa diferente' {
+    It 'rejects SC4 with different case' {
         $password = 'OffensiveTest#2026!x'
         $encoded = Protect-SecretMessage -PlainText 'case' -Password $password
         $parts = $encoded -split '\.', 5
         $parts[0] = 'sc4'
-        { Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password } | Should -Throw '*Versao nao suportada*'
+        { Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password } | Should -Throw '*Unsupported version*'
     }
 
-    It 'confirma tamanhos exatos de salt nonce e tag' {
+    It 'confirms exact salt, nonce and tag sizes' {
         $password = 'OffensiveTest#2026!x'
         $encoded = Protect-SecretMessage -PlainText 'tamanhos' -Password $password
         $parts = $encoded -split '\.', 5
@@ -311,7 +311,7 @@ Describe 'CipherVault | Offensive security' {
         $tag.Length | Should -Be 16
     }
 
-    It 'usa salt diferente para derivar chaves diferentes' {
+    It 'uses a different salt to derive different keys' {
         $password = 'OffensiveTest#2026!x'
         $a = Protect-SecretMessage -PlainText 'key-a' -Password $password
         $b = Protect-SecretMessage -PlainText 'key-b' -Password $password
@@ -333,19 +333,19 @@ Describe 'CipherVault | Offensive security' {
         }
     }
 
-    It 'aceita senha Unicode fora do BMP' {
-        $password = 'Senha#2026!🔐'
+    It 'accepts a Unicode password outside the BMP' {
+        $password = 'Password#2026!🔐'
         $text = 'unicode-password'
         $encoded = Protect-SecretMessage -PlainText $text -Password $password
         Unprotect-SecretMessage -EncodedText $encoded -Password $password | Should -Be $text
     }
 
-    It 'rejeita ciphertext truncado que ainda forma Base64 valido' {
+    It 'rejects truncated ciphertext that remains valid Base64' {
         $password = 'OffensiveTest#2026!x'
         $encoded = Protect-SecretMessage -PlainText 'ciphertext truncation test' -Password $password
         $parts = $encoded -split '\.', 5
         $parts[4] = $parts[4].Substring(0, $parts[4].Length - 4)
-        { Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password } | Should -Throw '*Falha de autenticacao*'
+        { Unprotect-SecretMessage -EncodedText ($parts -join '.') -Password $password } | Should -Throw '*Authentication failed*'
     }
 
 }
