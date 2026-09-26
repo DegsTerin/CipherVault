@@ -36,12 +36,13 @@ jobs:
       - name: Static analysis
         shell: pwsh
         run: |
-		$results = @(
-  			Get-ChildItem -Path . -Recurse -File -Filter *.ps1 |
-				ForEach-Object {
-					Invoke-ScriptAnalyzer -Path $_.FullName -Severity Error
-				}
-		)
+          $results = @(
+            Get-ChildItem -Path . -Recurse -File -Filter *.ps1 |
+              ForEach-Object {
+                Invoke-ScriptAnalyzer -Path $_.FullName -Severity Error
+              }
+          )
+
           if ($results) {
             $results | Format-Table -AutoSize | Out-String | Write-Host
             exit 1
