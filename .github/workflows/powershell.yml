@@ -16,7 +16,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -36,7 +36,15 @@ jobs:
       - name: Static analysis
         shell: pwsh
         run: |
-          $results = @(Invoke-ScriptAnalyzer -Path . -Include *.ps1 -Severity Error)
+          $paths = @(
+            Get-ChildItem -Path . -Recurse -File -Filter *.ps1 |
+              Select-Object -ExpandProperty FullName
+          )
+
+          $results = @(
+            Invoke-ScriptAnalyzer -Path $paths -Severity Error
+          )
+
           if ($results) {
             $results | Format-Table -AutoSize | Out-String | Write-Host
             exit 1
