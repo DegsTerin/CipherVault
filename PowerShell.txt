@@ -1,4 +1,4 @@
-cd C:\CipherVault
+cd C:\Projects\CipherVault
 
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
