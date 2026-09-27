@@ -985,8 +985,21 @@ function Invoke-EncodeFlow {
 }
 
 function Invoke-DecodeFlow {
+    [CmdletBinding()]
+    param(
+        [ValidateSet('Input', 'Clipboard')]
+        [string]$Source = 'Input'
+    )
+
     Show-Banner
-    Write-Host '  DECRYPT MESSAGE' -ForegroundColor Cyan
+
+    if ($Source -eq 'Clipboard') {
+        Write-Host '  DECRYPT CLIPBOARD TEXT' -ForegroundColor Cyan
+    }
+    else {
+        Write-Host '  DECRYPT MESSAGE' -ForegroundColor Cyan
+    }
+
     Write-Rule
     Write-Host
 
@@ -994,23 +1007,40 @@ function Invoke-DecodeFlow {
 
     try {
         Write-Host
-        Write-Host 'Paste the complete code and press Enter.' -ForegroundColor Gray
-        Write-Host 'If left empty, CipherVault tries to read the clipboard.' -ForegroundColor DarkGray
-        Write-Host
 
-        $encodedText = Read-Host 'Code'
-        if ([string]::IsNullOrWhiteSpace($encodedText)) {
+        if ($Source -eq 'Clipboard') {
+            Write-Host 'Reading the encrypted code from the clipboard.' -ForegroundColor Gray
             $encodedText = Get-ClipboardTextSafe
+            if ([string]::IsNullOrWhiteSpace($encodedText)) {
+                throw 'No encrypted code was found in the clipboard.'
+            }
         }
+        else {
+            Write-Host 'Paste the complete code and press Enter.' -ForegroundColor Gray
+            Write-Host 'If left empty, CipherVault tries to read the clipboard.' -ForegroundColor DarkGray
+            Write-Host
 
-        if ([string]::IsNullOrWhiteSpace($encodedText)) {
-            throw 'No code was provided.'
+            $encodedText = Read-Host 'Code'
+            if ([string]::IsNullOrWhiteSpace($encodedText)) {
+                $encodedText = Get-ClipboardTextSafe
+            }
+
+            if ([string]::IsNullOrWhiteSpace($encodedText)) {
+                throw 'No code was provided.'
+            }
         }
 
         $result = Unprotect-SecretMessage -EncodedText $encodedText -Password $password
 
         Show-Banner
-        Write-Host '  DECRYPT MESSAGE' -ForegroundColor Cyan
+
+        if ($Source -eq 'Clipboard') {
+            Write-Host '  DECRYPT CLIPBOARD TEXT' -ForegroundColor Cyan
+        }
+        else {
+            Write-Host '  DECRYPT MESSAGE' -ForegroundColor Cyan
+        }
+
         Write-Rule
         Write-Host
         Write-Host '  RECOVERED MESSAGE:' -ForegroundColor Green
@@ -1099,8 +1129,9 @@ function Start-CipherVault {
             Write-Host '  [1] Encrypt message' -ForegroundColor White
             Write-Host '  [2] Encrypt clipboard text' -ForegroundColor White
             Write-Host '  [3] Decrypt message' -ForegroundColor White
-            Write-Host '  [4] Generate secure password' -ForegroundColor White
-            Write-Host '  [5] About / parameters' -ForegroundColor White
+            Write-Host '  [4] Decrypt clipboard text' -ForegroundColor White
+            Write-Host '  [5] Generate secure password' -ForegroundColor White
+            Write-Host '  [6] About / parameters' -ForegroundColor White
             Write-Host '  [0] Exit' -ForegroundColor White
             Write-Host
 
@@ -1110,9 +1141,10 @@ function Start-CipherVault {
             switch ($choice) {
                 '1' { Invoke-EncodeFlow -Source Input }
                 '2' { Invoke-EncodeFlow -Source Clipboard }
-                '3' { Invoke-DecodeFlow }
-                '4' { Invoke-PasswordGeneratorFlow }
-                '5' { Show-About }
+                '3' { Invoke-DecodeFlow -Source Input }
+                '4' { Invoke-DecodeFlow -Source Clipboard }
+                '5' { Invoke-PasswordGeneratorFlow }
+                '6' { Show-About }
                 '0' {
                     Show-Banner
                     Write-Host '  Exiting CipherVault...' -ForegroundColor DarkGray
