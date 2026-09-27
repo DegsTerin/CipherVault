@@ -679,7 +679,7 @@ function Test-CipherVault {
 function Read-PasswordHidden {
     param([string]$Prompt = 'Password')
 
-    Write-Host "$Prompt (minimum $($script:MinPasswordLength) characters): " -NoNewline -ForegroundColor Gray
+    Write-Host "$Prompt (minimum $($script:MinPasswordLength), maximum $($script:MaxPasswordLength) characters): " -NoNewline -ForegroundColor Gray
     [char[]]$buffer = [char[]]::new($script:MaxPasswordLength)
     [int]$count = 0
 
@@ -1010,6 +1010,8 @@ function Invoke-DecodeFlow {
     try {
         Write-Host
 
+        $password = Read-PasswordHidden
+
         if ($Source -eq 'Clipboard') {
             Write-Host 'First copy the encrypted code you want to decrypt.' -ForegroundColor Gray
             Write-Host 'Then press Enter to read the clipboard.' -ForegroundColor DarkGray
@@ -1020,12 +1022,8 @@ function Invoke-DecodeFlow {
             if ([string]::IsNullOrWhiteSpace($encodedText)) {
                 throw 'No encrypted code was found in the clipboard.'
             }
-
-            $password = Read-PasswordHidden
         }
         else {
-            $password = Read-PasswordHidden
-
             Write-Host 'Paste the complete code and press Enter.' -ForegroundColor Gray
             Write-Host 'If left empty, CipherVault tries to read the clipboard.' -ForegroundColor DarkGray
             Write-Host
