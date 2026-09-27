@@ -141,6 +141,13 @@ Describe 'CipherVault' {
         $safe | Should -Match '\\u200B'
     }
 
+    It 'normalises Windows line endings for terminal display' {
+        $input = "Line 1`r`nLine 2`r`n`r`nLine 3"
+        $safe = ConvertTo-SafeConsoleText -Text $input
+
+        $safe | Should -Be "Line 1`nLine 2`n`nLine 3"
+        $safe | Should -Not -Match '\\u000D'
+    }
     It 'rejects structural data containing a control character without reflecting the raw character in the exception' {
         $password = 'UnitTest#CipherVault!2026'
         $encoded = Protect-SecretMessage -PlainText 'test' -Password $password
