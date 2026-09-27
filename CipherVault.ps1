@@ -151,18 +151,15 @@ function New-SecurePassword {
     )
 
     $offset = 0
-
     foreach ($alphabet in $alphabets) {
         for ($i = 0; $i -lt $charactersPerClass; $i++) {
-            $passwordChars[$offset] = $alphabet[
-                [System.Security.Cryptography.RandomNumberGenerator]::GetInt32($alphabet.Length)
-            ]
+            $passwordChars[$offset] = $alphabet[[System.Security.Cryptography.RandomNumberGenerator]::GetInt32($alphabet.Length)]
             $offset++
         }
     }
 
-    # Fisher-Yates shuffle using the same CSPRNG to remove class-position patterns
-# while preserving the exact class counts.
+    # Fisher-Yates shuffle using the same CSPRNG removes predictable class positions
+    # while preserving the exact class counts requested by the user.
     for ($i = $passwordChars.Length - 1; $i -gt 0; $i--) {
         $swapIndex = [System.Security.Cryptography.RandomNumberGenerator]::GetInt32($i + 1)
         if ($swapIndex -ne $i) {
@@ -879,224 +876,7 @@ function Invoke-PasswordGeneratorFlow {
     try {
         $lengthInput = Read-Host '  Password length'
 
-        if ($lengthInput -notmatch '^\d+
-    param(
-        [ValidateSet('Input', 'Clipboard')]
-        [string]$Source = 'Input'
-    )
-
-    Show-Banner
-    Write-Host '  ENCRYPT MESSAGE' -ForegroundColor Cyan
-    Write-Rule
-    Write-Host
-
-    $password = Read-PasswordHidden
-
-    try {
-        if ($Source -eq 'Clipboard') {
-            $plainText = Read-MultilineFromClipboard
-        }
-        else {
-            $plainText = Read-SingleLineMessage
-        }
-
-        if ([string]::IsNullOrEmpty($plainText)) {
-            throw 'The message cannot be empty.'
-        }
-
-        $result = Protect-SecretMessage -PlainText $plainText -Password $password
-
-        Show-Banner
-        Write-Host '  ENCRYPT MESSAGE' -ForegroundColor Cyan
-        Write-Rule
-        Write-Host
-        Write-Host '  RESULT:' -ForegroundColor Green
-        Write-Host
-        Write-Host $result -ForegroundColor White
-        Write-Host
-        Write-Rule
-
-        if (Copy-ToClipboardSafe -Text $result) {
-            Write-Host '  Code copied to the clipboard.' -ForegroundColor Green
-        }
-        else {
-            Write-Host '  Automatic copy is not available.' -ForegroundColor Yellow
-        }
-    }
-    catch {
-        Write-Host
-        Write-Host ("  ERROR: " + (ConvertTo-SafeConsoleText -Text $_.Exception.Message)) -ForegroundColor Red
-    }
-    finally {
-        $password = $null
-        $plainText = $null
-        $result = $null
-    }
-
-    Write-Host
-    [void](Read-Host 'Press Enter to return to the menu')
-}
-
-function Invoke-DecodeFlow {
-    Show-Banner
-    Write-Host '  DECRYPT MESSAGE' -ForegroundColor Cyan
-    Write-Rule
-    Write-Host
-
-    $password = Read-PasswordHidden
-
-    try {
-        Write-Host
-        Write-Host 'Paste the complete code and press Enter.' -ForegroundColor Gray
-        Write-Host 'If left empty, CipherVault tries to read the clipboard.' -ForegroundColor DarkGray
-        Write-Host
-
-        $encodedText = Read-Host 'Code'
-        if ([string]::IsNullOrWhiteSpace($encodedText)) {
-            $encodedText = Get-ClipboardTextSafe
-        }
-
-        if ([string]::IsNullOrWhiteSpace($encodedText)) {
-            throw 'No code was provided.'
-        }
-
-        $result = Unprotect-SecretMessage -EncodedText $encodedText -Password $password
-
-        Show-Banner
-        Write-Host '  DECRYPT MESSAGE' -ForegroundColor Cyan
-        Write-Rule
-        Write-Host
-        Write-Host '  RECOVERED MESSAGE:' -ForegroundColor Green
-        Write-Host
-        Write-Host (ConvertTo-SafeConsoleText -Text $result) -ForegroundColor White
-        Write-Host
-        Write-Rule
-        Write-Host '  Terminal controls were escaped to prevent ANSI/VT injection.' -ForegroundColor DarkGray
-    }
-    catch {
-        Write-Host
-        Write-Host ("  ERROR: " + (ConvertTo-SafeConsoleText -Text $_.Exception.Message)) -ForegroundColor Red
-    }
-    finally {
-        $password = $null
-        $encodedText = $null
-        $result = $null
-    }
-
-    Write-Host
-    [void](Read-Host 'Press Enter to return to the menu')
-}
-
-function Show-About {
-    Show-Banner
-    Write-Host '  ABOUT / SECURITY' -ForegroundColor Cyan
-    Write-Rule
-    Write-Host
-    Write-Host '  CipherVault is a console-based message-encryption system.'
-    Write-Host '  Protection: AES-256-GCM.'
-    Write-Host '  Key derivation: PBKDF2-HMAC-SHA256.'
-    Write-Host "  PBKDF2 iterations: $($script:KdfIterations)."
-    Write-Host '  Salt: 16 bytes | Nonce: 12 bytes | Tag: 16 bytes | Key: 32 bytes.'
-    Write-Host '  Format: SC4, with the algorithm and parameters bound by AAD.'
-    Write-Host '  Formats other than SC4 are rejected.'
-    Write-Host "  Message limit: $($script:MaxPlaintextBytes) bytes."
-    Write-Host "  Password limit: $($script:MaxPasswordLength) characters."
-    Write-Host
-    Write-Host '  The custom alphabet only remaps Base64.' -ForegroundColor DarkGray
-    Write-Host '  It does not increase cryptographic security.' -ForegroundColor DarkGray
-    Write-Host
-    Write-Host '  The result is copied to the clipboard when possible.' -ForegroundColor DarkGray
-    Write-Host '  Keep the password separate from the encrypted code.' -ForegroundColor Yellow
-    Write-Host
-    [void](Read-Host 'Press Enter to return to the menu')
-}
-
-function Start-CipherVault {
-    try {
-        $minimumVersion = [version]'7.4'
-        if ([version]$PSVersionTable.PSVersion -lt $minimumVersion) {
-            Show-Banner
-            Write-Host '  UNSUPPORTED POWERSHELL VERSION.' -ForegroundColor Red
-            Write-Host '  CipherVault requires PowerShell 7.4 or later.' -ForegroundColor Yellow
-            Write-Host
-            [void](Read-Host 'Press Enter to exit')
-            return
-        }
-
-        if (-not [System.Security.Cryptography.AesGcm]::IsSupported) {
-            Show-Banner
-            Write-Host '  AES-GCM IS NOT AVAILABLE IN THIS ENVIRONMENT.' -ForegroundColor Red
-            Write-Host '  Check PowerShell 7 and .NET cryptographic support.' -ForegroundColor Yellow
-            Write-Host
-            [void](Read-Host 'Press Enter to exit')
-            return
-        }
-
-        $selfTest = Test-CipherVault
-        if (-not $selfTest) {
-            Show-Banner
-            Write-Host '  INITIALISATION ERROR' -ForegroundColor Red
-            Write-Host '  The cryptographic self-test failed.' -ForegroundColor Red
-            if ($script:SelfTestError) {
-                Write-Host "  Detail: $($script:SelfTestError)" -ForegroundColor DarkYellow
-            }
-            Write-Host
-            Write-Host '  The program was stopped to avoid using an unvalidated mechanism.' -ForegroundColor Yellow
-            Write-Host
-            [void](Read-Host 'Press Enter to exit')
-            return
-        }
-
-        while ($true) {
-            Show-Banner
-            Write-Host '  [1] Encrypt message' -ForegroundColor White
-            Write-Host '  [2] Encrypt clipboard text' -ForegroundColor White
-            Write-Host '  [3] Decrypt message' -ForegroundColor White
-            Write-Host '  [4] Generate secure password' -ForegroundColor White
-            Write-Host '  [5] About / parameters' -ForegroundColor White
-            Write-Host '  [0] Exit' -ForegroundColor White
-            Write-Host
-
-            $choice = Read-Host '  Choose an option'
-            Write-Host
-
-            switch ($choice) {
-                '1' { Invoke-EncodeFlow -Source Input }
-                '2' { Invoke-EncodeFlow -Source Clipboard }
-                '3' { Invoke-DecodeFlow }
-                '4' { Invoke-PasswordGeneratorFlow }
-                '5' { Show-About }
-                '0' {
-                    Show-Banner
-                    Write-Host '  Exiting CipherVault...' -ForegroundColor DarkGray
-                    return
-                }
-                default {
-                    Write-Host '  Invalid option.' -ForegroundColor Red
-                    [void](Read-Host 'Press Enter')
-                }
-            }
-        }
-    }
-    catch {
-        try { [Console]::CursorVisible = $true } catch { }
-        Write-Host
-        Write-Host ("FATAL ERROR: " + (ConvertTo-SafeConsoleText -Text $_.Exception.Message)) -ForegroundColor Red
-        Write-Host
-        [void](Read-Host 'Press Enter to exit')
-    }
-}
-
-# UTF-8 avoids character issues in the border on compatible hosts.
-try {
-    [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
-}
-catch { }
-
-if (-not $NoStart) {
-    Start-CipherVault
-}
-) {
+        if ($lengthInput -notmatch '^\d+$') {
             throw 'Enter a whole number between 12 and 256.'
         }
 
@@ -1319,7 +1099,8 @@ function Start-CipherVault {
             Write-Host '  [1] Encrypt message' -ForegroundColor White
             Write-Host '  [2] Encrypt clipboard text' -ForegroundColor White
             Write-Host '  [3] Decrypt message' -ForegroundColor White
-            Write-Host '  [4] About / parameters' -ForegroundColor White
+            Write-Host '  [4] Generate secure password' -ForegroundColor White
+            Write-Host '  [5] About / parameters' -ForegroundColor White
             Write-Host '  [0] Exit' -ForegroundColor White
             Write-Host
 
@@ -1330,7 +1111,8 @@ function Start-CipherVault {
                 '1' { Invoke-EncodeFlow -Source Input }
                 '2' { Invoke-EncodeFlow -Source Clipboard }
                 '3' { Invoke-DecodeFlow }
-                '4' { Show-About }
+                '4' { Invoke-PasswordGeneratorFlow }
+                '5' { Show-About }
                 '0' {
                     Show-Banner
                     Write-Host '  Exiting CipherVault...' -ForegroundColor DarkGray
