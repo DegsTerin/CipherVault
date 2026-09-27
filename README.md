@@ -6,7 +6,7 @@ Local message encryption system written in PowerShell 7.4+, designed to run excl
 
 ![CipherVault terminal demo](assets/ciphervault-demo.gif)
 
-The demo shows clipboard encryption, clipboard decryption and secure password generation.
+The animated demo shows clipboard encryption, clipboard decryption and secure password generation.
 
 ## Cryptography
 
