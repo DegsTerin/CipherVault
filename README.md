@@ -49,8 +49,9 @@ A minimum of 12 characters does not guarantee good entropy. Prefer long, random 
 [1] Encrypt message
 [2] Encrypt clipboard text
 [3] Decrypt message
-[4] Generate secure password
-[5] About / parameters
+[4] Decrypt clipboard text
+[5] Generate secure password
+[6] About / parameters
 [0] Exit
 ```
 
