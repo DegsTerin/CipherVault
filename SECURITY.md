@@ -1,5 +1,11 @@
 # Security Policy
 
+## Password generator
+
+CipherVault can generate cryptographically random passwords from 12 to 256 characters. To keep the four character classes balanced, the selected length must be a multiple of 4, with equal counts of lowercase letters, uppercase letters, digits and symbols.
+
+Generated passwords are copied to the clipboard when available. CipherVault does not persist a password history or store generated passwords on disk.
+
 ## Scope
 
 CipherVault is a local message-encryption application. Its purpose is to protect confidentiality and integrity against people who do not possess the password.
