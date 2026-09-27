@@ -32,6 +32,15 @@ Messages using other format identifiers are rejected.
 - Ciphertext: up to 8 MiB
 - Received encoded text: up to 16 MiB
 
+### Secure password generator
+
+- Length: 12 to 256 characters.
+- Allowed lengths are multiples of 4 so lowercase, uppercase, digits and symbols appear in equal quantities.
+- Characters are selected with .NET `RandomNumberGenerator`.
+- The four character classes are cryptographically shuffled.
+- Generated passwords are copied to the clipboard when available.
+- Generated passwords are not stored, logged or retained by CipherVault.
+
 A minimum of 12 characters does not guarantee good entropy. Prefer long, random passwords.
 
 ## Features
@@ -40,7 +49,8 @@ A minimum of 12 characters does not guarantee good entropy. Prefer long, random 
 [1] Encrypt message
 [2] Encrypt clipboard text
 [3] Decrypt message
-[4] About / parameters
+[4] Generate secure password
+[5] About / parameters
 [0] Exit
 ```
 
