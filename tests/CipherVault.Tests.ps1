@@ -29,6 +29,40 @@ Describe 'CipherVault' {
         $a | Should -Not -Be $b
     }
 
+    It 'generates secure passwords with equal character-class counts' {
+        foreach ($length in @(12, 16, 32, 64, 128, 256)) {
+            $password = New-SecurePassword -Length $length
+
+            $password.Length | Should -Be $length
+            ([regex]::Matches($password, '[a-z]')).Count | Should -Be ($length / 4)
+            ([regex]::Matches($password, '[A-Z]')).Count | Should -Be ($length / 4)
+            ([regex]::Matches($password, '[0-9]')).Count | Should -Be ($length / 4)
+            ([regex]::Matches($password, '[^a-zA-Z0-9]')).Count | Should -Be ($length / 4)
+        }
+    }
+
+    It 'rejects password-generator lengths that are not multiples of four' {
+        foreach ($length in @(13, 17, 255)) {
+            { New-SecurePassword -Length $length } | Should -Throw '*multiple of 4*'
+        }
+    }
+
+    It 'generates distinct passwords across consecutive requests' {
+        $generated = [System.Collections.Generic.HashSet[string]]::new()
+
+        foreach ($iteration in 1..100) {
+            $password = New-SecurePassword -Length 64
+            $generated.Add($password) | Should -BeTrue
+        }
+    }
+
+    It 'uses only printable non-whitespace password characters' {
+        foreach ($length in @(12, 64, 256)) {
+            $password = New-SecurePassword -Length $length
+            $password | Should -Not -Match '\s'
+            $password | Should -Not -Match '[\x00-\x1F\x7F-\x9F]'
+        }
+    }
     It 'rejects an incorrect password' {
         $encoded = Protect-SecretMessage -PlainText 'test' -Password 'UnitTest#CipherVault!2026'
         { Unprotect-SecretMessage -EncodedText $encoded -Password 'WrongPassword#2026!' } | Should -Throw '*Authentication failed*'
