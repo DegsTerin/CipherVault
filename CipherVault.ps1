@@ -772,9 +772,12 @@ function ConvertTo-SafeConsoleText {
         0xFEFF        # Zero Width No-Break Space / BOM
     )
 
-    $builder = [System.Text.StringBuilder]::new($Text.Length)
+    # Console output uses LF line endings. Normalise CRLF and lone CR line endings
+    # so Windows-authored messages do not expose the carriage return as \\u000D.
+    $normalisedText = $Text.Replace("`r`n", "`n").Replace("`r", "`n")
+    $builder = [System.Text.StringBuilder]::new($normalisedText.Length)
 
-    foreach ($char in $Text.ToCharArray()) {
+    foreach ($char in $normalisedText.ToCharArray()) {
         $code = [int][char]$char
 
         if ($code -eq 10) {
