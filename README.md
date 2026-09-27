@@ -2,6 +2,12 @@
 
 Local message encryption system written in PowerShell 7.4+, designed to run exclusively in the terminal.
 
+## Demo
+
+![CipherVault terminal demo](assets/ciphervault-demo.gif)
+
+The demo shows clipboard encryption, clipboard decryption and secure password generation.
+
 ## Cryptography
 
 - AES-256-GCM
