@@ -63,6 +63,21 @@ Describe 'CipherVault' {
             $password | Should -Not -Match '[\x00-\x1F\x7F-\x9F]'
         }
     }
+    It 'decrypts an encrypted code read from the clipboard source' {
+        $password = 'UnitTest#CipherVault!2026'
+        $encoded = Protect-SecretMessage -PlainText 'clipboard test' -Password $password
+
+        Mock -CommandName Read-PasswordHidden -MockWith { $password }
+        Mock -CommandName Get-ClipboardTextSafe -MockWith { $encoded }
+        Mock -CommandName Read-Host -MockWith { '' }
+        Mock -CommandName Show-Banner -MockWith {}
+        Mock -CommandName Write-Rule -MockWith {}
+        Mock -CommandName Write-Host -MockWith {}
+
+        { Invoke-DecodeFlow -Source Clipboard } | Should -Not -Throw
+        Should -Invoke Get-ClipboardTextSafe -Times 1 -Exactly
+    }
+
     It 'rejects an incorrect password' {
         $encoded = Protect-SecretMessage -PlainText 'test' -Password 'UnitTest#CipherVault!2026'
         { Unprotect-SecretMessage -EncodedText $encoded -Password 'WrongPassword#2026!' } | Should -Throw '*Authentication failed*'
