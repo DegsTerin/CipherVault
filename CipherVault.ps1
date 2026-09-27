@@ -1003,19 +1003,29 @@ function Invoke-DecodeFlow {
     Write-Rule
     Write-Host
 
-    $password = Read-PasswordHidden
+    $password = $null
+    $encodedText = $null
+    $result = $null
 
     try {
         Write-Host
 
         if ($Source -eq 'Clipboard') {
-            Write-Host 'Reading the encrypted code from the clipboard.' -ForegroundColor Gray
+            Write-Host 'First copy the encrypted code you want to decrypt.' -ForegroundColor Gray
+            Write-Host 'Then press Enter to read the clipboard.' -ForegroundColor DarkGray
+            Write-Host
+            [void](Read-Host 'Press Enter to continue')
+
             $encodedText = Get-ClipboardTextSafe
             if ([string]::IsNullOrWhiteSpace($encodedText)) {
                 throw 'No encrypted code was found in the clipboard.'
             }
+
+            $password = Read-PasswordHidden
         }
         else {
+            $password = Read-PasswordHidden
+
             Write-Host 'Paste the complete code and press Enter.' -ForegroundColor Gray
             Write-Host 'If left empty, CipherVault tries to read the clipboard.' -ForegroundColor DarkGray
             Write-Host
