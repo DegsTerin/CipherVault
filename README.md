@@ -65,6 +65,28 @@ There are no Windows Forms, WPF or animations.
 
 ## Running
 
+### Desktop shortcut
+
+CipherVault can be launched by double-clicking a Windows desktop shortcut.
+
+Run this installer once from PowerShell 7:
+
+```powershell
+.\tools\Install-CipherVaultShortcut.ps1
+```
+
+The installer creates:
+
+```text
+Desktop\\CipherVault.lnk
+```
+
+The shortcut launches `pwsh.exe` directly with `CipherVault.ps1`. It does not use CMD or an intermediate launcher.
+
+After the shortcut is created, simply double-click **CipherVault** on the desktop.
+
+### Command line
+
 ```powershell
 pwsh -NoProfile -File .\CipherVault.ps1
 ```
