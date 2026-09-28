@@ -78,7 +78,7 @@ Run this installer once from PowerShell 7:
 The installer creates:
 
 ```text
-Desktop\\CipherVault.lnk
+Desktop\CipherVault.lnk
 ```
 
 The shortcut launches `pwsh.exe` directly with `CipherVault.ps1`. It does not use CMD or an intermediate launcher.
