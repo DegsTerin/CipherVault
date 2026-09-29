@@ -1,3 +1,4 @@
+#! /usr/bin/env pythonw
 from pathlib import Path
 import ctypes
 import shutil
