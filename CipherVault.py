@@ -1,5 +1,5 @@
 from pathlib import Path
-import os
+import ctypes
 import shutil
 import subprocess
 import sys
@@ -25,20 +25,36 @@ def main() -> int:
         )
         return 1
 
+    arguments = subprocess.list2cmdline(
+        [
+            "-NoProfile",
+            "-File",
+            str(cipher_vault_script),
+        ]
+    )
+
     try:
-        subprocess.Popen(
-            [
-                pwsh,
-                "-NoProfile",
-                "-File",
-                str(cipher_vault_script),
-            ],
-            cwd=str(project_directory),
-            creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0),
+        shell_execute = ctypes.windll.shell32.ShellExecuteW
+        shell_execute.restype = ctypes.c_void_p
+
+        result = shell_execute(
+            None,
+            "runas",
+            pwsh,
+            arguments,
+            str(project_directory),
+            1,
         )
+
+        if result is None or result <= 32:
+            print(
+                "CipherVault could not be started with administrator privileges.",
+                file=sys.stderr,
+            )
+            return 1
     except OSError as error:
         print(
-            f"PowerShell 7 could not be started: {error}",
+            f"Administrator launch failed: {error}",
             file=sys.stderr,
         )
         return 1
