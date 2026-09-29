@@ -5,6 +5,22 @@ import subprocess
 import sys
 
 
+SW_HIDE = 0
+SW_SHOW = 1
+
+
+def hide_launcher_console() -> None:
+    if sys.platform != "win32":
+        return
+
+    try:
+        console_window = ctypes.windll.kernel32.GetConsoleWindow()
+        if console_window:
+            ctypes.windll.user32.ShowWindow(console_window, SW_HIDE)
+    except OSError:
+        pass
+
+
 def show_error(message: str) -> None:
     ctypes.windll.user32.MessageBoxW(
         0,
@@ -14,14 +30,36 @@ def show_error(message: str) -> None:
     )
 
 
-def get_pythonw() -> str | None:
-    executable = Path(sys.executable)
-    sibling = executable.with_name("pythonw.exe")
+def find_pwsh() -> str | None:
+    pwsh = shutil.which("pwsh.exe")
+    if pwsh:
+        return pwsh
 
-    if sibling.is_file():
-        return str(sibling)
+    candidates = [
+        Path(sys.executable).resolve().anchor
+        / "Program Files"
+        / "PowerShell"
+        / "7"
+        / "pwsh.exe",
+        Path(sys.executable).resolve().anchor
+        / "Program Files"
+        / "PowerShell"
+        / "7-preview"
+        / "pwsh.exe",
+        Path.home()
+        / "AppData"
+        / "Local"
+        / "Microsoft"
+        / "PowerShell"
+        / "7"
+        / "pwsh.exe",
+    ]
 
-    return shutil.which("pythonw")
+    for candidate in candidates:
+        if candidate.is_file():
+            return str(candidate)
+
+    return None
 
 
 def is_administrator() -> bool:
@@ -31,30 +69,26 @@ def is_administrator() -> bool:
         return False
 
 
-def relaunch_as_administrator(script_path: Path) -> int:
-    pythonw = get_pythonw()
-
-    if pythonw is None:
-        show_error(
-            "pythonw.exe was not found. "
-            "A windowless Python interpreter is required for the double-click launcher."
-        )
-        return 1
-
+def launch_as_administrator(
+    pwsh: str,
+    cipher_vault_script: Path,
+    project_directory: Path,
+) -> int:
     arguments = subprocess.list2cmdline(
         [
-            str(script_path),
-            "--elevated",
+            "-NoProfile",
+            "-File",
+            str(cipher_vault_script),
         ]
     )
 
     result = ctypes.windll.shell32.ShellExecuteW(
         None,
         "runas",
-        pythonw,
+        pwsh,
         arguments,
-        str(script_path.parent),
-        1,
+        str(project_directory),
+        SW_SHOW,
     )
 
     if result <= 32:
@@ -76,16 +110,21 @@ def main() -> int:
         )
         return 1
 
-    if not is_administrator():
-        return relaunch_as_administrator(Path(__file__).resolve())
-
-    pwsh = shutil.which("pwsh")
+    pwsh = find_pwsh()
     if pwsh is None:
         show_error(
             "PowerShell 7 (pwsh.exe) was not found. "
-            "Install PowerShell 7 and try again."
+            "Install PowerShell 7.4 or later and try again."
         )
         return 1
+
+    if not is_administrator():
+        hide_launcher_console()
+        return launch_as_administrator(
+            pwsh,
+            cipher_vault_script,
+            project_directory,
+        )
 
     try:
         subprocess.Popen(
