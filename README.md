@@ -2,6 +2,8 @@
 
 Local message encryption system written in PowerShell 7.4+, designed to run exclusively in the terminal.
 
+It encrypts message/text data only; it does not provide file-at-rest encryption.
+
 ## Demo
 
 ![CipherVault terminal demo](assets/ciphervault-demo.gif)
