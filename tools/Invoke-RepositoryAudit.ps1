@@ -112,6 +112,20 @@ if ($forbiddenTracked.Count -gt 0) {
     $findings += $forbiddenTracked | ForEach-Object { [pscustomobject]@{ Type='Path'; Path=$_; Finding='Sensitive versioned extension' } }
 }
 
+if ($tracked -contains 'test-results.xml') {
+    $findings += [pscustomobject]@{ Type='Path'; Path='test-results.xml'; Finding='Tracked test artefact' }
+}
+
+foreach ($legacyPath in @('CipherVault.py', 'CipherVault.vbs')) {
+    if ($tracked -contains $legacyPath) {
+        $findings += [pscustomobject]@{ Type='Path'; Path=$legacyPath; Finding='Legacy launcher should not be versioned' }
+    }
+}
+
+if (-not ($tracked -contains 'CipherVault.pyw')) {
+    $findings += [pscustomobject]@{ Type='Path'; Path='CipherVault.pyw'; Finding='Required Windows double-click launcher is missing' }
+}
+
 if ($findings.Count -gt 0) {
     Write-Host 'REPOSITORY AUDIT: FAILED' -ForegroundColor Red
     $findings | Sort-Object Path, Finding | Format-Table -AutoSize | Out-String | Write-Host
