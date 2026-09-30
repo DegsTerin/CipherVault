@@ -233,7 +233,7 @@ The current `main` branch was reviewed again after the launcher changes and repo
 - **Launcher discovery:** the launcher resolves PowerShell 7 from standard installation locations and only accepts PATH fallbacks that resolve under recognised PowerShell installation directories, reducing executable-hijacking exposure during elevation.
 - **Documentation drift:** README and helper documentation now describe the `.pyw` launcher and its Python 3.10+ requirement.
 - **Release drift:** the release workflow now uses the same pinned `actions/checkout` v7 SHA as CI and runs repository audit, PSScriptAnalyzer and Pester before packaging.
-- **Repository hygiene:** the duplicate funding key was removed, stale launcher/checksum artefacts are being removed, and Python cache files are ignored.
+- **Repository hygiene:** the duplicate funding key was removed, stale launcher/checksum artefacts have been removed, and Python cache files are ignored.
 
 ### Residual security considerations
 
