@@ -52,7 +52,7 @@ else {
 }
 
 $forbiddenPaths = @(
-    '\.env(?:\.|$)',
+    '(?i)\.env(?:\.|$)',
     '(?i)(^|/)(credentials?|secrets?|tokens?)(?:/|$)',
     '(?i)\.(pem|pfx|p12|key)$'
 )
@@ -103,13 +103,6 @@ foreach ($path in $tracked) {
     if ($text -match '(?m)^\s*(?:SC3)\b') {
         $findings += [pscustomobject]@{ Type='Content'; Path=$path; Finding='Reference to legacy SC3 format' }
     }
-}
-
-$forbiddenExtensions = @('.pem','.pfx','.p12','.key')
-$forbiddenTracked = @($tracked | Where-Object { $forbiddenExtensions -contains ([IO.Path]::GetExtension($_).ToLowerInvariant()) })
-
-if ($forbiddenTracked.Count -gt 0) {
-    $findings += $forbiddenTracked | ForEach-Object { [pscustomobject]@{ Type='Path'; Path=$_; Finding='Sensitive versioned extension' } }
 }
 
 if ($tracked -contains 'test-results.xml') {
