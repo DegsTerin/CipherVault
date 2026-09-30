@@ -33,6 +33,7 @@ if ($isGitRepository) {
     if ($tracked.Count -eq 0) {
         throw 'Git repository has no versioned files. Add the safe files to the index before running the audit.'
     }
+
     Write-Host 'Mode: files versioned by Git' -ForegroundColor DarkGray
 }
 else {
@@ -40,13 +41,20 @@ else {
         Get-ChildItem -LiteralPath $root -Recurse -File -Force |
             Where-Object {
                 $_.FullName -notmatch [regex]::Escape([IO.Path]::DirectorySeparatorChar + '.git' + [IO.Path]::DirectorySeparatorChar) -and
-                $_.FullName -notmatch '[\\/]test-results\\.(xml)$'
+                $_.FullName -notmatch '[\/]test-results\.(xml)$'
             } |
-            ForEach-Object { [IO.Path]::GetRelativePath($root, $_.FullName).Replace([IO.Path]::DirectorySeparatorChar, '/') }
+            ForEach-Object {
+                [IO.Path]::GetRelativePath(
+                    $root,
+                    $_.FullName
+                ).Replace([IO.Path]::DirectorySeparatorChar, '/')
+            }
     )
+
     if ($tracked.Count -eq 0) {
         throw 'No files found to audit.'
     }
+
     Write-Host 'Mode: working tree (directory has not yet been initialised as a Git repository)' -ForegroundColor Yellow
     Write-Host 'Warning: the audit covers all local files, but does not verify the Git index state.' -ForegroundColor Yellow
 }
@@ -60,7 +68,11 @@ $forbiddenPaths = @(
 $pathFindings = foreach ($path in $tracked) {
     foreach ($pattern in $forbiddenPaths) {
         if ($path -match $pattern) {
-            [pscustomobject]@{ Type='Path'; Path=$path; Finding='Sensitive versioned file' }
+            [pscustomobject]@{
+                Type = 'Path'
+                Path = $path
+                Finding = 'Sensitive versioned file'
+            }
             break
         }
     }
@@ -79,6 +91,7 @@ $findings = @($pathFindings)
 
 foreach ($path in $tracked) {
     $full = Join-Path $root ($path -replace '/', [IO.Path]::DirectorySeparatorChar)
+
     if (-not (Test-Path -LiteralPath $full -PathType Leaf)) {
         continue
     }
@@ -93,62 +106,59 @@ foreach ($path in $tracked) {
     foreach ($item in $secretPatterns.GetEnumerator()) {
         if ($text -match $item.Value) {
             $findings += [pscustomobject]@{
-                Type='Content'
-                Path=$path
-                Finding="Possible $($item.Key)"
+                Type = 'Content'
+                Path = $path
+                Finding = "Possible $($item.Key)"
             }
         }
     }
 
-    if ($path -ne 'tools/Invoke-RepositoryAudit.ps1' -and $path -match '(?i)\.(ps1|pyw)\z' -and $text -match '(?i)\bSC3\b') {
-        $findings += [pscustomobject]@{ Type='Content'; Path=$path; Finding='Reference to legacy SC3 format' }
+    if (
+        $path -ne 'tools/Invoke-RepositoryAudit.ps1' -and
+        $path -match '(?i)\.(ps1|pyw)\z' -and
+        $text -match '(?i)\bSC3\b'
+    ) {
+        $findings += [pscustomobject]@{
+            Type = 'Content'
+            Path = $path
+            Finding = 'Reference to legacy SC3 format'
+        }
     }
 }
 
 if ($tracked -contains 'test-results.xml') {
-    $findings += [pscustomobject]@{ Type='Path'; Path='test-results.xml'; Finding='Tracked test artefact' }
+    $findings += [pscustomobject]@{
+        Type = 'Path'
+        Path = 'test-results.xml'
+        Finding = 'Tracked test artefact'
+    }
 }
 
 foreach ($legacyPath in @('CipherVault.py', 'CipherVault.vbs')) {
     if ($tracked -contains $legacyPath) {
-        $findings += [pscustomobject]@{ Type='Path'; Path=$legacyPath; Finding='Legacy launcher should not be versioned' }
+        $findings += [pscustomobject]@{
+            Type = 'Path'
+            Path = $legacyPath
+            Finding = 'Legacy launcher should not be versioned'
+        }
     }
 }
 
 if (-not ($tracked -contains 'CipherVault.pyw')) {
-    $findings += [pscustomobject]@{ Type='Path'; Path='CipherVault.pyw'; Finding='Required Windows double-click launcher is missing' }
+    $findings += [pscustomobject]@{
+        Type = 'Path'
+        Path = 'CipherVault.pyw'
+        Finding = 'Required Windows double-click launcher is missing'
+    }
 }
 
 if ($findings.Count -gt 0) {
     Write-Host 'REPOSITORY AUDIT: FAILED' -ForegroundColor Red
-    $findings | Sort-Object Path, Finding | Format-Table -AutoSize | Out-String | Write-Host
-    exit 1
-}
-
-Write-Host 'REPOSITORY AUDIT: OK' -ForegroundColor Green
-Write-Host "Versioned files analysed: $($tracked.Count)" -ForegroundColor Green
- -and $text -match '(?i)\bSC3\b') {
-        $findings += [pscustomobject]@{ Type='Content'; Path=$path; Finding='Reference to legacy SC3 format' }
-    }
-}
-
-if ($tracked -contains 'test-results.xml') {
-    $findings += [pscustomobject]@{ Type='Path'; Path='test-results.xml'; Finding='Tracked test artefact' }
-}
-
-foreach ($legacyPath in @('CipherVault.py', 'CipherVault.vbs')) {
-    if ($tracked -contains $legacyPath) {
-        $findings += [pscustomobject]@{ Type='Path'; Path=$legacyPath; Finding='Legacy launcher should not be versioned' }
-    }
-}
-
-if (-not ($tracked -contains 'CipherVault.pyw')) {
-    $findings += [pscustomobject]@{ Type='Path'; Path='CipherVault.pyw'; Finding='Required Windows double-click launcher is missing' }
-}
-
-if ($findings.Count -gt 0) {
-    Write-Host 'REPOSITORY AUDIT: FAILED' -ForegroundColor Red
-    $findings | Sort-Object Path, Finding | Format-Table -AutoSize | Out-String | Write-Host
+    $findings |
+        Sort-Object Path, Finding |
+        Format-Table -AutoSize |
+        Out-String |
+        Write-Host
     exit 1
 }
 
