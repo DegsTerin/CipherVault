@@ -63,6 +63,18 @@ Describe 'CipherVault' {
             $password | Should -Not -Match '[\x00-\x1F\x7F-\x9F]'
         }
     }
+    It 'keeps the Windows launcher windowless and elevated' {
+        $launcherPath = Join-Path $PSScriptRoot '..' 'CipherVault.pyw'
+        $launcher = Get-Content -LiteralPath $launcherPath -Raw
+
+        $launcher | Should -Match 'runas'
+        $launcher | Should -Match 'pwsh\.exe'
+        $launcher | Should -Match 'CipherVault\.ps1'
+        $launcher | Should -Not -Match '(?i)-ExecutionPolicy\s+Bypass'
+        (Test-Path -LiteralPath (Join-Path $PSScriptRoot '..' 'CipherVault.py')) | Should -BeFalse
+        (Test-Path -LiteralPath (Join-Path $PSScriptRoot '..' 'CipherVault.vbs')) | Should -BeFalse
+    }
+
     It 'decrypts an encrypted code read from the clipboard source' {
         $password = 'UnitTest#CipherVault!2026'
         $encoded = Protect-SecretMessage -PlainText 'clipboard test' -Password $password
