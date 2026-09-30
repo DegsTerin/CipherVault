@@ -1,7 +1,7 @@
 # CipherVault, cryptographic and offensive security audit
 
 **Current reviewed version:** 3.6.2
-**Review date:** 2026-09-25
+**Review date:** 2026-09-30
 
 ## Scope
 
@@ -221,3 +221,29 @@ The release workflow now rejects tags that do not follow `vMAJOR.MINOR.PATCH`, p
 - truncation of ciphertext that remains valid Base64.
 
 Round 5 still depends on execution in the supported Windows/PowerShell environment before it can be considered approved.
+
+## Current repository review, 2026-09-30
+
+The current `main` branch was reviewed again after the launcher changes and repository hardening. This is a source-code and repository audit, not a third-party penetration test or cryptographic certification.
+
+### Findings addressed
+
+- **Launcher drift:** the repository previously contained `CipherVault.py` while the intended Windows entry point had become `CipherVault.pyw`. The legacy `.py` launcher is being removed and `CipherVault.pyw` is now the documented double-click entry point.
+- **Unnecessary elevated execution path:** the launcher now elevates the target PowerShell process directly through Windows UAC instead of relaunching Python and then PowerShell. It does not use `-ExecutionPolicy Bypass`.
+- **Launcher discovery:** the launcher resolves PowerShell 7 from standard installation locations and only accepts PATH fallbacks that resolve under recognised PowerShell installation directories, reducing executable-hijacking exposure during elevation.
+- **Documentation drift:** README and helper documentation now describe the `.pyw` launcher and its Python 3.10+ requirement.
+- **Release drift:** the release workflow now uses the same pinned `actions/checkout` v7 SHA as CI and runs repository audit, PSScriptAnalyzer and Pester before packaging.
+- **Repository hygiene:** the duplicate funding key was removed, stale launcher/checksum artefacts are being removed, and Python cache files are ignored.
+
+### Residual security considerations
+
+- The launcher intentionally starts PowerShell with administrator privileges. Encryption itself does not require administrator privileges.
+- PowerShell strings remain subject to managed-memory lifetime and are not deterministically erased.
+- Password-only encryption remains vulnerable to offline guessing when passwords are weak. Current OWASP guidance continues to distinguish PBKDF2 for FIPS-required cases from Argon2id as the preferred modern password hashing choice when available. citeturn375366search0
+- The custom alphabet is an encoding transformation and does not add cryptographic strength.
+- The AAD currently binds the SC4 identifier, algorithm and PBKDF2 iteration count. The fixed salt, nonce, tag and key sizes are enforced structurally and should not be described as independently encoded in AAD.
+- The audit does not replace independent cryptographic review or a formal penetration test.
+
+### Verification status
+
+The latest GitHub Actions run before this review completed successfully, including PowerShell version verification, static analysis, repository audit and the Pester suite. A fresh run after the current repository changes is required before this revision is considered fully verified.
