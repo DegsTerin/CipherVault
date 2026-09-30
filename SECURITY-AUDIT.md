@@ -30,7 +30,7 @@ The current format is exclusively:
 SC4.salt.nonce.tag.ciphertext
 ```
 
-AAD binds the version, algorithm and KDF parameters.
+AAD binds the version, algorithm and PBKDF2 iteration count. Structural validation separately enforces the fixed salt, nonce, tag and key sizes.
 
 ## Included tests
 
