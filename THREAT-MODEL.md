@@ -26,7 +26,7 @@ Protect message confidentiality and integrity against an attacker who knows the 
 - Plaintext confidentiality under the security of the password and AES-256-GCM.
 - Integrity and authentication of the ciphertext and AAD.
 - New messages use random salt and nonce values.
-- The SC4 format binds the version and cryptographic parameters through AAD.
+- The SC4 format binds the version, algorithm and PBKDF2 iteration count through AAD; fixed field sizes are enforced structurally.
 
 ## Properties not provided
 
