@@ -11,6 +11,28 @@ Set-Location $root
 Write-Host '== CipherVault checks ==' -ForegroundColor Cyan
 Write-Host
 
+$requiredPath = Join-Path $root 'CipherVault.pyw'
+if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {
+    throw 'CipherVault.pyw is missing.'
+}
+
+foreach ($legacyPath in @('CipherVault.py', 'CipherVault.vbs')) {
+    $legacyFullPath = Join-Path $root $legacyPath
+    if (Test-Path -LiteralPath $legacyFullPath) {
+        throw "$legacyPath is a legacy launcher and must not be present."
+    }
+}
+
+$pythonCommand = Get-Command 'python.exe' -CommandType Application -ErrorAction SilentlyContinue
+if ($null -eq $pythonCommand) {
+    throw 'Python 3.10+ is required to validate CipherVault.pyw.'
+}
+
+& $pythonCommand.Source -m py_compile $requiredPath
+if ($LASTEXITCODE -ne 0) {
+    throw 'Python syntax validation failed for CipherVault.pyw.'
+}
+
 $pester = Get-Module -ListAvailable -Name Pester |
     Where-Object { $_.Version -eq [version]'6.2.0' } |
     Sort-Object Version -Descending |
