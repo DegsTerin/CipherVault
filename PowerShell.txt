@@ -1,5 +1,7 @@
-cd C:\Projects\CipherVault
-
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+# PowerShell 7.4+ command-line launch
 
 pwsh -NoProfile -File .\CipherVault.ps1
+
+# Windows double-click launch
+
+Double-click CipherVault.pyw
