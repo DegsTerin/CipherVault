@@ -1,13 +1,21 @@
-#! /usr/bin/env pythonw
 from pathlib import Path
 import ctypes
 import shutil
-import subprocess
 import sys
+from ctypes import wintypes
 
 
 SW_HIDE = 0
 SW_SHOW = 1
+
+
+def show_error(message: str) -> None:
+    ctypes.windll.user32.MessageBoxW(
+        0,
+        message,
+        "CipherVault",
+        0x10,
+    )
 
 
 def hide_launcher_console() -> None:
@@ -22,19 +30,14 @@ def hide_launcher_console() -> None:
         pass
 
 
-def show_error(message: str) -> None:
-    ctypes.windll.user32.MessageBoxW(
-        0,
-        message,
-        "CipherVault",
-        0x10,
-    )
-
-
 def find_pwsh() -> str | None:
     pwsh = shutil.which("pwsh.exe")
     if pwsh:
         return pwsh
+
+    system_root = Path(
+        __import__("os").environ.get("SystemRoot", r"C:\Windows")
+    )
 
     candidates = [
         Path(sys.executable).resolve().anchor
@@ -42,11 +45,11 @@ def find_pwsh() -> str | None:
         / "PowerShell"
         / "7"
         / "pwsh.exe",
-        Path(sys.executable).resolve().anchor
-        / "Program Files"
-        / "PowerShell"
-        / "7-preview"
-        / "pwsh.exe",
+        system_root
+        / "System32"
+        / "WindowsPowerShell"
+        / "v1.0"
+        / "powershell.exe",
         Path.home()
         / "AppData"
         / "Local"
@@ -70,35 +73,65 @@ def is_administrator() -> bool:
         return False
 
 
-def launch_as_administrator(
+def launch_elevated(
+    executable: str,
+    arguments: str,
+    working_directory: Path,
+) -> bool:
+    shell_execute = ctypes.windll.shell32.ShellExecuteW
+    shell_execute.argtypes = [
+        wintypes.HWND,
+        wintypes.LPCWSTR,
+        wintypes.LPCWSTR,
+        wintypes.LPCWSTR,
+        wintypes.LPCWSTR,
+        ctypes.c_int,
+    ]
+    shell_execute.restype = wintypes.HINSTANCE
+
+    result = shell_execute(
+        None,
+        "runas",
+        executable,
+        arguments,
+        str(working_directory),
+        SW_SHOW,
+    )
+
+    return result > 32
+
+
+def launch_cipher_vault(
     pwsh: str,
     cipher_vault_script: Path,
     project_directory: Path,
-) -> int:
-    arguments = subprocess.list2cmdline(
-        [
-            "-NoProfile",
-            "-File",
-            str(cipher_vault_script),
-        ]
+) -> bool:
+    arguments = (
+        "-NoProfile -ExecutionPolicy Bypass -File "
+        + '"' + str(cipher_vault_script) + '"'
     )
 
-    result = ctypes.windll.shell32.ShellExecuteW(
+    shell_execute = ctypes.windll.shell32.ShellExecuteW
+    shell_execute.argtypes = [
+        wintypes.HWND,
+        wintypes.LPCWSTR,
+        wintypes.LPCWSTR,
+        wintypes.LPCWSTR,
+        wintypes.LPCWSTR,
+        ctypes.c_int,
+    ]
+    shell_execute.restype = wintypes.HINSTANCE
+
+    result = shell_execute(
         None,
-        "runas",
+        None,
         pwsh,
         arguments,
         str(project_directory),
         SW_SHOW,
     )
 
-    if result <= 32:
-        show_error(
-            "CipherVault could not be started with administrator privileges."
-        )
-        return 1
-
-    return 0
+    return result > 32
 
 
 def main() -> int:
@@ -121,25 +154,26 @@ def main() -> int:
 
     if not is_administrator():
         hide_launcher_console()
-        return launch_as_administrator(
-            pwsh,
-            cipher_vault_script,
-            project_directory,
+
+        arguments = (
+            "-NoProfile -ExecutionPolicy Bypass -File "
+            + '"' + str(cipher_vault_script) + '"'
         )
 
-    try:
-        subprocess.Popen(
-            [
-                pwsh,
-                "-NoProfile",
-                "-File",
-                str(cipher_vault_script),
-            ],
-            cwd=str(project_directory),
-            creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0),
-        )
-    except OSError as error:
-        show_error(f"PowerShell 7 could not be started: {error}")
+        if not launch_elevated(pwsh, arguments, project_directory):
+            show_error(
+                "CipherVault could not be started with administrator privileges."
+            )
+            return 1
+
+        return 0
+
+    if not launch_cipher_vault(
+        pwsh,
+        cipher_vault_script,
+        project_directory,
+    ):
+        show_error("PowerShell 7 could not be started.")
         return 1
 
     return 0
