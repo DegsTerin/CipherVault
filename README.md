@@ -17,7 +17,7 @@ The animated demo shows clipboard encryption, clipboard decryption and secure pa
 - 12-byte random nonce
 - 16-byte GCM tag
 - 32-byte derived key
-- AAD binding the format, algorithm and cryptographic parameters
+- AAD binding the format version, algorithm and PBKDF2 iteration count
 
 The custom alphabet only remaps Base64. It does not increase cryptographic security.
 
