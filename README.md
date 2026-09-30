@@ -119,7 +119,7 @@ Invoke-Pester .\tests
 
 After the test suite runs, the project displays an explicit test completion message.
 
-`Invoke-Checks.ps1` reports the actual counters read from the XML report, for example `Tests passed : 6` and `Failures : 0`.
+`Invoke-Checks.ps1` reports the actual test counters read from the XML report.
 
 For static analysis:
 
