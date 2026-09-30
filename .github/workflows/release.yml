@@ -19,9 +19,37 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: Verify PowerShell version
+        shell: pwsh
+        run: |
+          if ([version]$PSVersionTable.PSVersion -lt [version]'7.4') {
+            throw "PowerShell 7.4+ is required. Detected version: $($PSVersionTable.PSVersion)"
+          }
+
+      - name: Validate Python launcher
+        shell: pwsh
+        run: |
+          if (-not (Get-Command python.exe -ErrorAction SilentlyContinue)) {
+            throw 'Python is required to validate CipherVault.pyw.'
+          }
+          python --version
+          python -m py_compile .\CipherVault.pyw
+
+      - name: Setup PowerShell modules
+        shell: pwsh
+        run: |
+          Install-Module Pester -RequiredVersion 6.2.0 -Scope CurrentUser -Force -Confirm:$false
+          Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force -Confirm:$false
+
+      - name: Repository audit and tests
+        shell: pwsh
+        run: |
+          & .\tools\Invoke-RepositoryAudit.ps1
+          & .\tools\Invoke-Checks.ps1
 
       - name: Build source artifact
         shell: pwsh
