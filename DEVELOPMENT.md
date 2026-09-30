@@ -3,6 +3,7 @@
 ## Environment
 
 - PowerShell 7.4+
+- Python 3.10+ for the double-click `.pyw` launcher
 - Pester 6.2.0
 - PSScriptAnalyzer 1.25.0
 
@@ -17,7 +18,7 @@ The additional offensive security suite is in `tests/CipherVault.Security.Tests.
 
 ## CI supply chain
 
-The workflow pins the checkout action to a full SHA and pins the test-module versions. Dependabot monitors GitHub Actions updates.
+The CI and release workflows pin GitHub Actions to full SHAs and pin the test-module versions. Dependabot monitors GitHub Actions updates.
 
 ## Pinned versions
 
@@ -37,4 +38,4 @@ Before publishing, run:
 .\tools\Invoke-RepositoryAudit.ps1
 ```
 
-The audit looks for sensitive files, selected high-confidence credential patterns, `test-results.xml` and references to the legacy SC3 format. In a Git repository, it uses versioned files; outside Git, it analyses the working tree and reports that limitation.
+The audit looks for sensitive files, selected high-confidence credential patterns, tracked `test-results.xml`, legacy launchers, and references to the legacy SC3 format. In a Git repository, it uses versioned files; outside Git, it analyses the working tree and reports that limitation.
