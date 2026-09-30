@@ -61,29 +61,29 @@ A minimum of 12 characters does not guarantee good entropy. Prefer long, random 
 [0] Exit
 ```
 
-There are no Windows Forms, WPF or animations.
+There are no Windows Forms, WPF, CMD launchers, WSH launchers or animations.
 
 ## Running
 
-### Desktop shortcut
+CipherVault requires PowerShell 7.4+. The optional double-click launcher also requires Python 3.10+.
 
-CipherVault can be launched by double-clicking a Windows desktop shortcut.
+### Double-click launcher
 
-Run this installer once from PowerShell 7:
+CipherVault includes a Windows `.pyw` launcher for direct startup.
 
-```powershell
-.\tools\Install-CipherVaultShortcut.ps1
-```
-
-The installer creates:
+Double-click:
 
 ```text
-Desktop\CipherVault.lnk
+CipherVault.pyw
 ```
 
-The shortcut launches `pwsh.exe` directly with `CipherVault.ps1`. It does not use CMD or an intermediate launcher.
+The launcher uses `pythonw.exe` so no intermediate Python console window is opened. It requests administrator approval through the Windows UAC and then launches PowerShell 7.4+ directly with `CipherVault.ps1`.
 
-After the shortcut is created, simply double-click **CipherVault** on the desktop.
+Requirements for the double-click launcher:
+
+- Windows
+- Python 3.10+ with `.pyw` file association
+- PowerShell 7.4+
 
 ### Command line
 
@@ -152,6 +152,10 @@ The 3.1.1 baseline was run on Windows 11 with Pester 6.2.0 and PSScriptAnalyzer 
 ## Threat model
 
 See `THREAT-MODEL.md`. CipherVault protects confidentiality and integrity, but does not provide identity authentication or anti-replay protection. The password remains the main factor affecting resistance to offline attacks.
+
+## Launcher and repository audit
+
+The repository is published as source code. The `.pyw` launcher is only a startup helper; the cryptographic implementation remains entirely in `CipherVault.ps1`.
 
 ## Repository audit, 3.6.2
 
