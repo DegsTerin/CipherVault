@@ -29,6 +29,10 @@ Where possible, include:
 - test input or ciphertext;
 - observed impact.
 
+## Launcher privilege model
+
+The Windows `CipherVault.pyw` launcher starts PowerShell 7.4+ through UAC with administrator privileges. This is a convenience requirement of the launcher, not a cryptographic requirement. Running source code with elevated privileges increases the impact of a compromised or tampered installation, so use a trusted checkout or release.
+
 ## Security model
 
 CipherVault assumes:
