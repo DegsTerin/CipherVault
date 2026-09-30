@@ -92,6 +92,13 @@ Describe 'CipherVault' {
         }
     }
 
+    It 'rejects tampering of the nonce' {
+        $password = 'UnitTest#CipherVault!2026'
+        $encoded = Protect-SecretMessage -PlainText 'test' -Password $password
+        $tampered = New-TamperedCipherText -EncodedText $encoded -Component 2
+        { Unprotect-SecretMessage -EncodedText $tampered -Password $password } | Should -Throw '*Authentication failed*'
+    }
+
     It 'rejects formats other than SC4' {
         $password = 'UnitTest#CipherVault!2026'
         $encoded = Protect-SecretMessage -PlainText 'test' -Password $password
@@ -129,16 +136,22 @@ Describe 'CipherVault' {
     }
 
     It 'escapes C0/C1 controls and invisible Unicode for terminal display' {
-        $input = ([char]27) + '[2J' + ([char]155) + '31m' + ([char]0x202E) + 'TRUSTED' + ([char]0x200B)
+        $input = ([char]27) + '[2J' + ([char]155) + '31m' + ([char]0x202E) + 'TRUSTED' + ([char]0x200B) + ([char]0x2061) + ([char]0x00AD) + ([char]0x034F)
         $safe = ConvertTo-SafeConsoleText -Text $input
         $safe | Should -Not -Match ([char]27)
         $safe | Should -Not -Match ([char]155)
         $safe | Should -Not -Match ([char]0x202E)
         $safe | Should -Not -Match ([char]0x200B)
+        $safe | Should -Not -Match ([char]0x2061)
+        $safe | Should -Not -Match ([char]0x00AD)
+        $safe | Should -Not -Match ([char]0x034F)
         $safe | Should -Match '\\u001B'
         $safe | Should -Match '\\u009B'
         $safe | Should -Match '\\u202E'
         $safe | Should -Match '\\u200B'
+        $safe | Should -Match '\\u2061'
+        $safe | Should -Match '\\u00AD'
+        $safe | Should -Match '\\u034F'
     }
 
     It 'normalises Windows line endings for terminal display' {
