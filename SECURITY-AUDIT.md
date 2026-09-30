@@ -228,7 +228,7 @@ The current `main` branch was reviewed again after the launcher changes and repo
 
 ### Findings addressed
 
-- **Launcher drift:** the repository previously contained `CipherVault.py` while the intended Windows entry point had become `CipherVault.pyw`. The legacy `.py` launcher is being removed and `CipherVault.pyw` is now the documented double-click entry point.
+- **Launcher drift:** the repository previously contained `CipherVault.py` while the intended Windows entry point had become `CipherVault.pyw`. The legacy `.py` launcher has been removed and `CipherVault.pyw` is now the documented double-click entry point.
 - **Unnecessary elevated execution path:** the launcher now elevates the target PowerShell process directly through Windows UAC instead of relaunching Python and then PowerShell. It does not use `-ExecutionPolicy Bypass`.
 - **Launcher discovery:** the launcher resolves PowerShell 7 from standard installation locations and only accepts PATH fallbacks that resolve under recognised PowerShell installation directories, reducing executable-hijacking exposure during elevation.
 - **Documentation drift:** README and helper documentation now describe the `.pyw` launcher and its Python 3.10+ requirement.
