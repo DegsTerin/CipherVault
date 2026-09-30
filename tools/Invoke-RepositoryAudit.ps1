@@ -100,7 +100,7 @@ foreach ($path in $tracked) {
         }
     }
 
-    if ($path -ne 'tools/Invoke-RepositoryAudit.ps1' -and $path -match '(?i)\.(ps1|pyw)
+    if ($path -ne 'tools/Invoke-RepositoryAudit.ps1' -and $path -match '(?i)\.(ps1|pyw)\z' -and $text -match '(?i)\bSC3\b') {
         $findings += [pscustomobject]@{ Type='Content'; Path=$path; Finding='Reference to legacy SC3 format' }
     }
 }
