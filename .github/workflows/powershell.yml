@@ -27,6 +27,15 @@ jobs:
             throw "PowerShell 7.4+ is required. Detected version: $($PSVersionTable.PSVersion)"
           }
 
+      - name: Validate Python launcher
+        shell: pwsh
+        run: |
+          if (-not (Get-Command python.exe -ErrorAction SilentlyContinue)) {
+            throw 'Python is required to validate CipherVault.pyw.'
+          }
+          python --version
+          python -m py_compile .\CipherVault.pyw
+
       - name: Setup PowerShell modules
         shell: pwsh
         run: |
