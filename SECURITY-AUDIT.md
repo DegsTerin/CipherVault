@@ -246,4 +246,4 @@ The current `main` branch was reviewed again after the launcher changes and repo
 
 ### Verification status
 
-The latest GitHub Actions run before this review completed successfully, including PowerShell version verification, static analysis, repository audit and the Pester suite. A fresh run after the current repository changes is required before this revision is considered fully verified.
+The latest GitHub Actions run for commit `13edd07207d6841225ed9ee89983cf1b8609dfd6` completed successfully. The run validated Python 3.12.10 syntax, PowerShell 7.4+, PSScriptAnalyzer, the repository audit and the full Pester suite: 48 tests passed, 0 failures, 0 errors, 0 not-run.
