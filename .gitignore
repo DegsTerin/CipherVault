@@ -3,6 +3,10 @@ test-results.xml
 dist/
 *.zip
 
+# Python cache
+__pycache__/
+*.py[cod]
+
 # Local PowerShell metadata
 *.psd1.local
 *.psm1.local
