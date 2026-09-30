@@ -23,12 +23,14 @@ foreach ($legacyPath in @('CipherVault.py', 'CipherVault.vbs')) {
     }
 }
 
-$pythonCommand = Get-Command 'python.exe' -CommandType Application -ErrorAction SilentlyContinue
+$pythonCommand = Get-Command 'python.exe' -CommandType Application -ErrorAction SilentlyContinue |
+    Where-Object { -not [string]::IsNullOrWhiteSpace($_.Path) } |
+    Select-Object -First 1
 if ($null -eq $pythonCommand) {
     throw 'Python 3.10+ is required to validate CipherVault.pyw.'
 }
 
-& $pythonCommand.Source -m py_compile $requiredPath
+& $pythonCommand.Path -m py_compile $requiredPath
 if ($LASTEXITCODE -ne 0) {
     throw 'Python syntax validation failed for CipherVault.pyw.'
 }
